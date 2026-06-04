@@ -12,15 +12,15 @@
       "Bash(git branch *)",
       "Bash(git checkout *)",
       "Bash(git stash *)",
+      "Bash(git push *)",
+      "Bash(git push)",
       "Read",
       "Edit",
       "Write"
     ],
     "ask": [
       "Bash(curl *)",
-      "Bash(wget *)",
-      "Bash(git push *)",
-      "Bash(git push)"
+      "Bash(wget *)"
     ],
     "deny": [
       "Bash(rm -rf *)"
