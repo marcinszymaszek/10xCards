@@ -189,68 +189,39 @@
 
 ---
 
-## Phase 6 — CI/CD wiring [HUMAN GATE + AGENT]
+## Phase 6 — CI/CD wiring [COMPLETE]
 
-> Wire GitHub Actions to auto-deploy on push to `master`.
+> Deploy on every push to `master` via **Cloudflare Workers Builds** (Git integration),
+> not GitHub Actions. `ci.yml` (lint + build gate) is kept for PR checks.
 
-### 6a — Create a scoped Cloudflare API token [HUMAN GATE]
+### Approach adopted
 
-1. Go to **Cloudflare Dashboard → My Profile → API Tokens → Create Token**
-2. Use the **"Edit Cloudflare Workers"** template (includes Workers Scripts: Edit + Assets: Edit)
-3. Scope to: **Account = your account**, **Zone Resources = All zones** (or no zone if Workers-only)
-4. Copy the token value — it is shown only once
+Cloudflare Workers Builds connected directly to the GitHub repo — no GitHub Actions deploy workflow needed.
 
-### 6b — Add secrets to GitHub repository [HUMAN GATE]
+### Build configuration
 
-Go to **GitHub → repo → Settings → Secrets and variables → Actions → New repository secret**:
-
-| Secret name | Value |
+| Field | Value |
 |---|---|
-| `CLOUDFLARE_API_TOKEN` | Token from step 6a |
-| `CLOUDFLARE_ACCOUNT_ID` | Found on Cloudflare dashboard right sidebar or via `wrangler whoami` |
+| Build command | `pnpm run build` |
+| Deploy command | `npx wrangler deploy --config dist/server/wrangler.json` |
+| Version command | `npx wrangler versions upload` |
+| Root directory | `/` |
+| Production branch | `master` |
+| Builds for non-production branches | Enabled |
+| Build watch paths | `*` |
+| Build variables | None (SUPABASE_URL/KEY are runtime Worker secrets) |
+| API token | Workers Builds — auto-created by Cloudflare |
 
-`SUPABASE_URL` and `SUPABASE_KEY` are already present in the repo secrets (used by existing CI build step).
+### Checklist
 
-### 6c — Add deploy workflow [AGENT]
-
-- [ ] Create `.github/workflows/deploy.yml` with the following content:
-
-```yaml
-name: Deploy
-
-on:
-  push:
-    branches: [master]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    needs: []
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx astro sync
-      - run: npm run build
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-```
-
-  **Note:** The existing `ci.yml` runs lint + build on every push and PR.
-  The new `deploy.yml` runs only on `master` push, after the build step.
-  Keeping them separate means lint failures on PRs don't block deploy logic.
-
-- [ ] Commit and push `deploy.yml` to `master`
-- [ ] Confirm the Actions run succeeds: `GitHub → Actions → Deploy`
-- [ ] Confirm the live URL still responds after the CI-triggered deploy
+- [x] Cloudflare Workers Builds connected to `marcinszymaszek/10xCards` GitHub repo
+- [x] SESSION KV namespace ID pinned in `wrangler.jsonc` (prevents new namespace on each deploy)
+- [x] Test push to `master` triggered build — succeeded
+- [x] Post-build smoke test passed:
+  - `/` → 200
+  - `/auth/signin` → 200
+  - `/auth/signup` → 200
+  - `/dashboard` (unauthenticated) → 302 → `/auth/signin`
 
 ---
 
