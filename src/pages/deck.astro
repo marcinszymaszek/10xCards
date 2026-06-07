@@ -1,0 +1,42 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import DeckBrowser from "@/components/deck/DeckBrowser";
+import { createClient } from "@/lib/supabase";
+import { listCards, parsePositiveInt, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, type FlashCard } from "@/lib/cards";
+
+const params = Astro.url.searchParams;
+const page = parsePositiveInt(params.get("page"), 1);
+const pageSize = parsePositiveInt(params.get("pageSize"), DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+const q = (params.get("q") ?? "").trim();
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+
+let items: FlashCard[] = [];
+let total = 0;
+if (supabase) {
+  try {
+    ({ items, total } = await listCards(supabase, { page, pageSize, q }));
+  } catch {
+    // SSR fetch failed — render an empty deck; DeckBrowser's client-side
+    // search/pagination will surface a fresh error if the problem persists
+  }
+}
+---
+
+<Layout title="My Deck">
+  <div class="bg-cosmic min-h-screen p-6">
+    <div class="mx-auto max-w-2xl">
+      <h1 class="mb-6 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
+        My Deck
+      </h1>
+      <DeckBrowser
+        client:load
+        initialItems={items}
+        initialTotal={total}
+        initialPage={page}
+        initialPageSize={pageSize}
+        initialQ={q}
+      />
+    </div>
+  </div>
+</Layout>

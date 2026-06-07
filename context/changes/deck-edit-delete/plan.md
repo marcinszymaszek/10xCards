@@ -219,23 +219,23 @@ Empty state: when `cards` is empty, show a message directing the user to `/gener
 
 #### Automated
 
-- [x] 1.1 `npm run lint` passes after endpoints added
-- [x] 1.2 `npm run build` succeeds
+- [x] 1.1 `npm run lint` passes after endpoints added — 1cb5df9
+- [x] 1.2 `npm run build` succeeds — 1cb5df9
 
 #### Manual
 
-- [x] 1.3 PATCH returns 200 with updated card; change visible in Supabase Studio
-- [x] 1.4 PATCH with blank field returns 400
-- [x] 1.5 PATCH without auth returns 401
-- [x] 1.6 DELETE returns 204; row removed from Supabase Studio
-- [x] 1.7 DELETE on another user's card returns 404
+- [x] 1.3 PATCH returns 200 with updated card; change visible in Supabase Studio — 1cb5df9
+- [x] 1.4 PATCH with blank field returns 400 — 1cb5df9
+- [x] 1.5 PATCH without auth returns 401 — 1cb5df9
+- [x] 1.6 DELETE returns 204; row removed from Supabase Studio — 1cb5df9
+- [x] 1.7 DELETE on another user's card returns 404 — 1cb5df9
 
 ### Phase 2: Deck Page + React Island
 
 #### Automated
 
-- [ ] 2.1 `npm run lint` passes (React Compiler zero errors)
-- [ ] 2.2 `npm run build` exits 0
+- [x] 2.1 `npm run lint` passes (React Compiler zero errors)
+- [x] 2.2 `npm run build` exits 0
 
 #### Manual
 

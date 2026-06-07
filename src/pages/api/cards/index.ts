@@ -1,16 +1,6 @@
 import type { APIRoute } from "astro";
 import { createClient } from "@/lib/supabase";
-
-interface FlashCard {
-  id: string;
-  front: string;
-  back: string;
-  created_at: string;
-}
-interface QueryList {
-  data: FlashCard[];
-  error: { message: string } | null;
-}
+import { listCards, parsePositiveInt, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "@/lib/cards";
 
 export const GET: APIRoute = async (context) => {
   const supabase = createClient(context.request.headers, context.cookies);
@@ -29,20 +19,21 @@ export const GET: APIRoute = async (context) => {
     });
   }
 
-  const { data: cards, error } = (await supabase
-    .from("flashcards")
-    .select("id, front, back, created_at")
-    .order("created_at", { ascending: false })) as unknown as QueryList;
+  const params = context.url.searchParams;
+  const page = parsePositiveInt(params.get("page"), 1);
+  const pageSize = parsePositiveInt(params.get("pageSize"), DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+  const q = (params.get("q") ?? "").trim();
 
-  if (error) {
+  try {
+    const { items, total } = await listCards(supabase, { page, pageSize, q });
+    return new Response(JSON.stringify({ items, total, page, pageSize }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch {
     return new Response(JSON.stringify({ error: "Failed to fetch cards" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }
-
-  return new Response(JSON.stringify({ cards }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
 };
