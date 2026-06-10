@@ -9,6 +9,7 @@ import cloudflare from "@astrojs/cloudflare";
 // https://astro.build/config
 export default defineConfig({
   output: "server",
+  server: { port: 3000 },
   integrations: [react(), sitemap()],
   vite: {
     plugins: [tailwindcss()],
@@ -18,6 +19,7 @@ export default defineConfig({
     schema: {
       SUPABASE_URL: envField.string({ context: "server", access: "secret", optional: true }),
       SUPABASE_KEY: envField.string({ context: "server", access: "secret", optional: true }),
+      ANTHROPIC_API_KEY: envField.string({ context: "server", access: "secret", optional: true }),
     },
   },
 });
