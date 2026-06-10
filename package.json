@@ -55,8 +55,11 @@
     "typescript-eslint": "^8.59.2",
     "wrangler": "^4.90.0"
   },
-  "overrides": {
-    "vite": "^7.3.2"
+  "packageManager": "pnpm@9.15.2",
+  "pnpm": {
+    "overrides": {
+      "vite": "^7.3.2"
+    }
   },
   "lint-staged": {
     "*.{ts,tsx,astro}": [

@@ -87,8 +87,8 @@ Two REST-style API routes operating on individual cards. Both require an authent
 
 #### Automated Verification
 
-- `npm run lint` passes.
-- `npm run build` succeeds.
+- `pnpm run lint` passes.
+- `pnpm run build` succeeds.
 
 #### Manual Verification
 
@@ -165,8 +165,8 @@ Empty state: when `cards` is empty, show a message directing the user to `/gener
 
 #### Automated Verification
 
-- `npm run lint` passes (React Compiler zero errors).
-- `npm run build` exits 0.
+- `pnpm run lint` passes (React Compiler zero errors).
+- `pnpm run build` exits 0.
 
 #### Manual Verification
 
@@ -187,8 +187,8 @@ Empty state: when `cards` is empty, show a message directing the user to `/gener
 
 ### Automated
 
-- `npm run lint` after each phase.
-- `npm run build` after Phase 2.
+- `pnpm run lint` after each phase.
+- `pnpm run build` after Phase 2.
 
 ### Manual Testing Steps
 
@@ -219,8 +219,8 @@ Empty state: when `cards` is empty, show a message directing the user to `/gener
 
 #### Automated
 
-- [x] 1.1 `npm run lint` passes after endpoints added — 1cb5df9
-- [x] 1.2 `npm run build` succeeds — 1cb5df9
+- [x] 1.1 `pnpm run lint` passes after endpoints added — 1cb5df9
+- [x] 1.2 `pnpm run build` succeeds — 1cb5df9
 
 #### Manual
 
@@ -234,8 +234,8 @@ Empty state: when `cards` is empty, show a message directing the user to `/gener
 
 #### Automated
 
-- [x] 2.1 `npm run lint` passes (React Compiler zero errors)
-- [x] 2.2 `npm run build` exits 0
+- [x] 2.1 `pnpm run lint` passes (React Compiler zero errors)
+- [x] 2.2 `pnpm run build` exits 0
 
 #### Manual
 

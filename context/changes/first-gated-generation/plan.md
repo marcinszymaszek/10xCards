@@ -95,8 +95,8 @@ The `generation_session_id` groups all cards from a single POST to `/api/generat
 
 #### Automated Verification
 
-- Migration applies without errors: `npx supabase db reset` (local) exits 0.
-- `npm run lint` passes after migration is in place.
+- Migration applies without errors: `pnpm exec supabase db reset` (local) exits 0.
+- `pnpm run lint` passes after migration is in place.
 
 #### Manual Verification
 
@@ -142,7 +142,7 @@ Mirror the `SUPABASE_URL` and `SUPABASE_KEY` entries exactly.
 
 **File**: `.dev.vars`
 
-**Intent**: Make the key available during `npm run dev` (Cloudflare workerd runtime reads `.dev.vars`).
+**Intent**: Make the key available during `pnpm run dev` (Cloudflare workerd runtime reads `.dev.vars`).
 
 **Contract**: Add the line `ANTHROPIC_API_KEY=<your-key>` to `.dev.vars`. This is a manual step; the file is git-ignored.
 
@@ -170,8 +170,8 @@ Mirror the `SUPABASE_URL` and `SUPABASE_KEY` entries exactly.
 
 #### Automated Verification
 
-- `npm run lint` passes (type errors and React Compiler checks).
-- `npm run build` succeeds (requires env vars; use `.dev.vars` + `.env`).
+- `pnpm run lint` passes (type errors and React Compiler checks).
+- `pnpm run build` succeeds (requires env vars; use `.dev.vars` + `.env`).
 
 #### Manual Verification
 
@@ -224,7 +224,7 @@ Behaviour:
 
 #### Automated Verification
 
-- `npm run lint` passes — React Compiler rule must produce zero errors.
+- `pnpm run lint` passes — React Compiler rule must produce zero errors.
 
 #### Manual Verification
 
@@ -266,8 +266,8 @@ Wire everything together: create the Astro page, mount the island, and add `/gen
 
 #### Automated Verification
 
-- `npm run build` exits 0.
-- `npm run lint` passes.
+- `pnpm run build` exits 0.
+- `pnpm run lint` passes.
 
 #### Manual Verification
 
@@ -283,8 +283,8 @@ Wire everything together: create the Astro page, mount the island, and add `/gen
 
 ### Automated (lint + type-check only — no test framework configured)
 
-- `npm run lint` must pass after each phase.
-- `npm run build` must pass after Phase 4 (requires env vars).
+- `pnpm run lint` must pass after each phase.
+- `pnpm run build` must pass after Phase 4 (requires env vars).
 
 ### Manual Testing Steps
 
@@ -300,7 +300,7 @@ Wire everything together: create the Astro page, mount the island, and add `/gen
 
 ## Migration Notes
 
-First migration in the project. Apply locally with `npx supabase db reset`. For the remote Supabase cloud project, apply via Supabase dashboard SQL editor or `npx supabase db push`.
+First migration in the project. Apply locally with `pnpm exec supabase db reset`. For the remote Supabase cloud project, apply via Supabase dashboard SQL editor or `pnpm exec supabase db push`.
 
 ## References
 
@@ -321,7 +321,7 @@ First migration in the project. Apply locally with `npx supabase db reset`. For 
 
 #### Automated
 
-- [x] 1.1 `npx supabase db reset` exits 0 with migration applied — 6ebc2c4
+- [x] 1.1 `pnpm exec supabase db reset` exits 0 with migration applied — 6ebc2c4
 
 #### Manual
 
@@ -332,8 +332,8 @@ First migration in the project. Apply locally with `npx supabase db reset`. For 
 
 #### Automated
 
-- [x] 2.1 `npm run lint` passes after endpoint is added — 79a60a5
-- [ ] 2.2 `npm run build` succeeds
+- [x] 2.1 `pnpm run lint` passes after endpoint is added — 79a60a5
+- [ ] 2.2 `pnpm run build` succeeds
 
 #### Manual
 
@@ -347,7 +347,7 @@ First migration in the project. Apply locally with `npx supabase db reset`. For 
 
 #### Automated
 
-- [x] 3.1 `npm run lint` passes (React Compiler zero errors) — 79a60a5
+- [x] 3.1 `pnpm run lint` passes (React Compiler zero errors) — 79a60a5
 
 #### Manual
 
@@ -361,8 +361,8 @@ First migration in the project. Apply locally with `npx supabase db reset`. For 
 
 #### Automated
 
-- [ ] 4.1 `npm run build` exits 0
-- [x] 4.2 `npm run lint` passes — 79a60a5
+- [ ] 4.1 `pnpm run build` exits 0
+- [x] 4.2 `pnpm run lint` passes — 79a60a5
 
 #### Manual
 
