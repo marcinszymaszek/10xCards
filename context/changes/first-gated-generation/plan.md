@@ -321,18 +321,18 @@ First migration in the project. Apply locally with `npx supabase db reset`. For 
 
 #### Automated
 
-- [x] 1.1 `npx supabase db reset` exits 0 with migration applied
+- [x] 1.1 `npx supabase db reset` exits 0 with migration applied — 6ebc2c4
 
 #### Manual
 
-- [x] 1.2 `flashcard_drafts` table visible in Supabase Studio with RLS enabled
-- [x] 1.3 Insert with mismatched user_id is rejected by RLS policy
+- [x] 1.2 `flashcard_drafts` table visible in Supabase Studio with RLS enabled — 6ebc2c4
+- [x] 1.3 Insert with mismatched user_id is rejected by RLS policy — 6ebc2c4
 
 ### Phase 2: AI Generation API
 
 #### Automated
 
-- [ ] 2.1 `npm run lint` passes after endpoint is added
+- [x] 2.1 `npm run lint` passes after endpoint is added — 79a60a5
 - [ ] 2.2 `npm run build` succeeds
 
 #### Manual
@@ -347,7 +347,7 @@ First migration in the project. Apply locally with `npx supabase db reset`. For 
 
 #### Automated
 
-- [ ] 3.1 `npm run lint` passes (React Compiler zero errors)
+- [x] 3.1 `npm run lint` passes (React Compiler zero errors) — 79a60a5
 
 #### Manual
 
@@ -362,7 +362,7 @@ First migration in the project. Apply locally with `npx supabase db reset`. For 
 #### Automated
 
 - [ ] 4.1 `npm run build` exits 0
-- [ ] 4.2 `npm run lint` passes
+- [x] 4.2 `npm run lint` passes — 79a60a5
 
 #### Manual
 
