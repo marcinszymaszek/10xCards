@@ -38,7 +38,7 @@ An authenticated user on `/generate`:
 - `supabase/migrations/20260607180817_create_flashcards_table.sql` — `flashcards` table already exists with `origin` CHECK (`'ai'` | `'manual'`). No new table migration needed.
 - `src/lib/supabase.ts` — `createClient()` returns `null` when env vars absent; all API routes must guard with `if (!supabase)`.
 - `src/components/auth/ServerError.tsx` + `SubmitButton.tsx` — reuse these primitives in the GenerationView extension.
-- React Compiler ESLint rule is `error`; all hooks usage must pass the compiler — especially `useCallback` wrapping event handlers.
+- React Compiler ESLint rule is `error`; all hooks usage must pass the compiler. The Compiler handles memoization automatically — write plain inline functions for event handlers; do **not** add manual `useCallback` or `useMemo` (the S-01 island passes lint with none).
 - `src/pages/deck.astro` pattern: server-side Supabase query → initial props to React island (`client:load`) — replicate this for pending drafts in `generate.astro`.
 
 ## What We're NOT Doing
@@ -212,7 +212,7 @@ Extend the existing `GenerationView.tsx` island to add per-card decision control
 
 Props interface (add):
 ```typescript
-interface DraftCardInput {
+export interface DraftCardInput {
   id: string;
   front: string;
   back: string;
@@ -250,7 +250,7 @@ Behaviour additions:
 - **Reject**: set `decision = 'rejected'` for the card; clear `isEditing`.
 - **Edit**: set `isEditing = true`; render front/back textareas prefilled with `editedFront`/`editedBack` (or original on first edit).
 - **Confirm edit**: set `editedFront`/`editedBack` from textarea values, set `isEditing = false`, set `decision = 'accepted'`.
-- **Save to Deck**: disabled when `drafts.filter(d => d.decision === 'accepted').length === 0` or `phase === 'saving'`. On click: set `phase = 'saving'`, `saveError = null`; POST `/api/drafts/promote` with `{ session_id: sessionId, accepted: drafts.filter(accepted).map(d => ({ id: d.id, front: d.editedFront || d.front, back: d.editedBack || d.back })) }`; on 200: set `phase = 'saved'`, `savedCount = data.saved`, reset form; on error: set `phase = 'reviewing'`, `saveError = message`.
+- **Save to Deck**: disabled when `drafts.filter(d => d.decision === 'accepted').length === 0` or `phase === 'saving'`. On click: set `phase = 'saving'`, `saveError = null`; POST `/api/drafts/promote` with `{ session_id: sessionId, accepted: drafts.filter(accepted).map(d => ({ id: d.id, front: d.editedFront || d.front, back: d.editedBack || d.back })) }`; on 200: set `phase = 'saved'`, `savedCount = data.saved`, `drafts = []`, `sessionId = null`, `text = ''`, `count = 5`, `generateError = null`; on error: set `phase = 'reviewing'`, `saveError = message`.
 - **Post-generate**: on 200 from `/api/generate`, map `session_id` to `sessionId`, map `cards` to `DraftCard[]` with all `decision: 'pending'`, set `phase = 'reviewing'`.
 - **Post-save success state**: render "X cards saved to your deck." and a `<a href="/deck">View Deck →</a>` link. The generate form resets so the user can start a new session immediately.
 - **Save error**: render `<ServerError message={saveError} />` above the card list (not above the form); decisions are preserved.
@@ -292,10 +292,10 @@ Update `generate.astro` to query the user's most recent pending session from the
 **Intent**: Restore the review list on page refresh by loading the most recent pending session's drafts server-side and passing them to the island.
 
 **Contract**: After obtaining the Supabase client (it may be `null` — guard before querying), run two sequential queries:
-1. Fetch the most recent `generation_session_id` where `state = 'pending'` for the current user (`.select('generation_session_id').eq('state','pending').order('created_at',{ascending:false}).limit(1).single()`).
-2. If a session exists, fetch all pending drafts for that `generation_session_id` ordered by `created_at ASC`.
+1. Fetch the most recent `generation_session_id` where `state = 'pending'` for the current user (`.select('generation_session_id').eq('state','pending').order('created_at',{ascending:false}).limit(1).maybeSingle()`). `.maybeSingle()` returns `{ data: null, error: null }` when no rows exist, so the absence of a pending session is not conflated with a DB error.
+2. If `data !== null` (a session exists), fetch all pending drafts for that `generation_session_id` ordered by `created_at ASC`.
 
-Pass the resulting array (or `[]` on null/error) as `initialDrafts` to `<GenerationView client:load initialDrafts={initialDrafts} />`. The `DraftCardInput` type can be imported from `GenerationView.tsx` or defined inline in the page.
+Pass the resulting array (or `[]` on null/error) as `initialDrafts` to `<GenerationView client:load initialDrafts={initialDrafts} />`. Import `DraftCardInput` from `@/components/generate/GenerationView` (it is exported there — see Phase 3 contract).
 
 On any Supabase error in these queries: silently fall back to `initialDrafts={[]}` — the page must not throw; the user loses refresh-persistence for that visit but the form still works.
 
@@ -365,13 +365,13 @@ This is the third migration in the project. The function targets the existing `f
 
 #### Automated
 
-- [ ] 1.1 `pnpm exec supabase db reset` exits 0 with all three migrations applied
-- [ ] 1.2 `pnpm run lint` passes
+- [x] 1.1 `pnpm exec supabase db reset` exits 0 with all three migrations applied
+- [x] 1.2 `pnpm run lint` passes
 
 #### Manual
 
-- [ ] 1.3 Function callable in Supabase Studio; creates flashcards and updates draft states correctly
-- [ ] 1.4 RLS enforcement: user_id mismatch rejects UPDATE on flashcard_drafts
+- [x] 1.3 Function callable in Supabase Studio; creates flashcards and updates draft states correctly
+- [x] 1.4 RLS enforcement: user_id mismatch rejects UPDATE on flashcard_drafts
 
 ### Phase 2: API — Promote Endpoint + Generate Response Fix
 
