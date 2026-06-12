@@ -365,28 +365,28 @@ This is the third migration in the project. The function targets the existing `f
 
 #### Automated
 
-- [x] 1.1 `pnpm exec supabase db reset` exits 0 with all three migrations applied
-- [x] 1.2 `pnpm run lint` passes
+- [x] 1.1 `pnpm exec supabase db reset` exits 0 with all three migrations applied — dbd8e9a
+- [x] 1.2 `pnpm run lint` passes — dbd8e9a
 
 #### Manual
 
-- [x] 1.3 Function callable in Supabase Studio; creates flashcards and updates draft states correctly
-- [x] 1.4 RLS enforcement: user_id mismatch rejects UPDATE on flashcard_drafts
+- [x] 1.3 Function callable in Supabase Studio; creates flashcards and updates draft states correctly — dbd8e9a
+- [x] 1.4 RLS enforcement: user_id mismatch rejects UPDATE on flashcard_drafts — dbd8e9a
 
 ### Phase 2: API — Promote Endpoint + Generate Response Fix
 
 #### Automated
 
-- [ ] 2.1 `pnpm run lint` passes
-- [ ] 2.2 `pnpm run build` succeeds
+- [x] 2.1 `pnpm run lint` passes
+- [x] 2.2 `pnpm run build` succeeds
 
 #### Manual
 
-- [ ] 2.3 `POST /api/generate` response includes `session_id`
-- [ ] 2.4 `POST /api/drafts/promote` with valid auth returns `{ saved: N }` and creates flashcards
-- [ ] 2.5 Draft states updated to accepted/rejected in Supabase Studio
-- [ ] 2.6 `POST /api/drafts/promote` without auth returns 401
-- [ ] 2.7 `POST /api/drafts/promote` with empty accepted array returns 400
+- [x] 2.3 `POST /api/generate` response includes `session_id`
+- [x] 2.4 `POST /api/drafts/promote` with valid auth returns `{ saved: N }` and creates flashcards
+- [x] 2.5 Draft states updated to accepted/rejected in Supabase Studio
+- [x] 2.6 `POST /api/drafts/promote` without auth returns 401
+- [x] 2.7 `POST /api/drafts/promote` with empty accepted array returns 400
 
 ### Phase 3: UI — GenerationView with Accept/Reject/Edit + Save
 

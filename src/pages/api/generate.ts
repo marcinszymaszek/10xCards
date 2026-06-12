@@ -139,7 +139,7 @@ export const POST: APIRoute = async (context) => {
     });
   }
 
-  return new Response(JSON.stringify({ cards: data }), {
+  return new Response(JSON.stringify({ session_id: sessionId, cards: data }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });
