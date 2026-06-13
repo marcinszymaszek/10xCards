@@ -377,42 +377,42 @@ This is the third migration in the project. The function targets the existing `f
 
 #### Automated
 
-- [x] 2.1 `pnpm run lint` passes
-- [x] 2.2 `pnpm run build` succeeds
+- [x] 2.1 `pnpm run lint` passes — 30ad1e5
+- [x] 2.2 `pnpm run build` succeeds — 30ad1e5
 
 #### Manual
 
-- [x] 2.3 `POST /api/generate` response includes `session_id`
-- [x] 2.4 `POST /api/drafts/promote` with valid auth returns `{ saved: N }` and creates flashcards
-- [x] 2.5 Draft states updated to accepted/rejected in Supabase Studio
-- [x] 2.6 `POST /api/drafts/promote` without auth returns 401
-- [x] 2.7 `POST /api/drafts/promote` with empty accepted array returns 400
+- [x] 2.3 `POST /api/generate` response includes `session_id` — 30ad1e5
+- [x] 2.4 `POST /api/drafts/promote` with valid auth returns `{ saved: N }` and creates flashcards — 30ad1e5
+- [x] 2.5 Draft states updated to accepted/rejected in Supabase Studio — 30ad1e5
+- [x] 2.6 `POST /api/drafts/promote` without auth returns 401 — 30ad1e5
+- [x] 2.7 `POST /api/drafts/promote` with empty accepted array returns 400 — 30ad1e5
 
 ### Phase 3: UI — GenerationView with Accept/Reject/Edit + Save
 
 #### Automated
 
-- [ ] 3.1 `pnpm run lint` passes (React Compiler zero errors)
+- [x] 3.1 `pnpm run lint` passes (React Compiler zero errors)
 
 #### Manual
 
-- [ ] 3.2 Accept/Reject buttons change card visual state
-- [ ] 3.3 Edit opens inline textareas; Confirm auto-accepts with edited text
-- [ ] 3.4 Save disabled when zero accepted; enabled when ≥ 1 accepted
-- [ ] 3.5 Successful save shows "X cards saved" banner and View Deck link
-- [ ] 3.6 Save failure shows ServerError banner; card decisions preserved
-- [ ] 3.7 initialDrafts prop starts component in reviewing state
+- [x] 3.2 Accept/Reject buttons change card visual state
+- [x] 3.3 Edit opens inline textareas; Confirm auto-accepts with edited text
+- [x] 3.4 Save disabled when zero accepted; enabled when ≥ 1 accepted
+- [x] 3.5 Successful save shows "X cards saved" banner and View Deck link
+- [x] 3.6 Save failure shows ServerError banner; card decisions preserved
+- [x] 3.7 initialDrafts prop starts component in reviewing state
 
 ### Phase 4: Page — Generate Page Loads Pending Drafts
 
 #### Automated
 
-- [ ] 4.1 `pnpm run build` exits 0
-- [ ] 4.2 `pnpm run lint` passes
+- [x] 4.1 `pnpm run build` exits 0
+- [x] 4.2 `pnpm run lint` passes
 
 #### Manual
 
-- [ ] 4.3 Refresh after generating shows pending cards (all decisions reset)
-- [ ] 4.4 Generate second session: new cards replace old display
-- [ ] 4.5 Refresh after saving: idle state (no pending drafts)
-- [ ] 4.6 Unauthenticated visit redirects to /auth/signin
+- [x] 4.3 Refresh after generating shows pending cards (all decisions reset)
+- [x] 4.4 Generate second session: new cards replace old display
+- [x] 4.5 Refresh after saving: idle state (no pending drafts)
+- [x] 4.6 Unauthenticated visit redirects to /auth/signin

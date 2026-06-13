@@ -6,131 +6,354 @@ const MAX_TEXT_LENGTH = 10000;
 const MIN_COUNT = 1;
 const MAX_COUNT = 20;
 
+export interface DraftCardInput {
+  id: string;
+  front: string;
+  back: string;
+  generation_session_id: string;
+}
+
+interface Props {
+  initialDrafts?: DraftCardInput[];
+}
+
 interface DraftCard {
   id: string;
   front: string;
   back: string;
-  state: string;
+  editedFront: string;
+  editedBack: string;
+  decision: "pending" | "accepted" | "rejected";
+  isEditing: boolean;
 }
 
-type Status = "idle" | "loading" | "success" | "error";
+type Phase = "idle" | "generating" | "reviewing" | "saving" | "saved";
 
-export default function GenerationView() {
+function toDraftCard(d: DraftCardInput): DraftCard {
+  return {
+    id: d.id,
+    front: d.front,
+    back: d.back,
+    editedFront: "",
+    editedBack: "",
+    decision: "pending",
+    isEditing: false,
+  };
+}
+
+export default function GenerationView({ initialDrafts }: Props) {
   const [text, setText] = useState("");
   const [count, setCount] = useState(5);
-  const [status, setStatus] = useState<Status>("idle");
-  const [cards, setCards] = useState<DraftCard[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [phase, setPhase] = useState<Phase>(() => (initialDrafts && initialDrafts.length > 0 ? "reviewing" : "idle"));
+  const [drafts, setDrafts] = useState<DraftCard[]>(() => initialDrafts?.map(toDraftCard) ?? []);
+  const [sessionId, setSessionId] = useState<string | null>(initialDrafts?.[0]?.generation_session_id ?? null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedCount, setSavedCount] = useState(0);
 
   const isOverCap = text.length > MAX_TEXT_LENGTH;
-  const canGenerate = text.trim().length > 0 && !isOverCap && status !== "loading";
+  const canGenerate = text.trim().length > 0 && !isOverCap && phase !== "generating";
+  const acceptedCount = drafts.filter((d) => d.decision === "accepted").length;
 
   async function handleGenerate() {
-    setStatus("loading");
-    setErrorMessage(null);
-    setCards([]);
-
+    setPhase("generating");
+    setGenerateError(null);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, count }),
       });
-
-      const json = (await res.json()) as { cards?: DraftCard[]; error?: string };
-
+      const json = (await res.json()) as {
+        session_id?: string;
+        cards?: { id: string; front: string; back: string }[];
+        error?: string;
+      };
       if (!res.ok) {
-        setStatus("error");
-        setErrorMessage(json.error ?? "Something went wrong — please try again.");
+        setPhase("idle");
+        setGenerateError(json.error ?? "Something went wrong — please try again.");
         return;
       }
-
-      setStatus("success");
-      setCards(json.cards ?? []);
+      setSessionId(json.session_id ?? null);
+      setDrafts(
+        (json.cards ?? []).map((c) => ({
+          id: c.id,
+          front: c.front,
+          back: c.back,
+          editedFront: "",
+          editedBack: "",
+          decision: "pending" as const,
+          isEditing: false,
+        })),
+      );
+      setPhase("reviewing");
     } catch {
-      setStatus("error");
-      setErrorMessage("Network error — please check your connection and try again.");
+      setPhase("idle");
+      setGenerateError("Network error — please check your connection and try again.");
     }
   }
 
+  function handleAccept(id: string) {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, decision: "accepted" as const, isEditing: false } : d)));
+  }
+
+  function handleReject(id: string) {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, decision: "rejected" as const, isEditing: false } : d)));
+  }
+
+  function handleEdit(id: string) {
+    setDrafts((prev) =>
+      prev.map((d) =>
+        d.id === id
+          ? { ...d, isEditing: true, editedFront: d.editedFront || d.front, editedBack: d.editedBack || d.back }
+          : d,
+      ),
+    );
+  }
+
+  function handleConfirmEdit(id: string) {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, isEditing: false, decision: "accepted" as const } : d)));
+  }
+
+  function handleFrontChange(id: string, value: string) {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, editedFront: value } : d)));
+  }
+
+  function handleBackChange(id: string, value: string) {
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, editedBack: value } : d)));
+  }
+
+  async function handleSave() {
+    if (!sessionId || acceptedCount === 0) return;
+    setPhase("saving");
+    setSaveError(null);
+    const accepted = drafts
+      .filter((d) => d.decision === "accepted")
+      .map((d) => ({ id: d.id, front: d.editedFront || d.front, back: d.editedBack || d.back }));
+    try {
+      const res = await fetch("/api/drafts/promote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, accepted }),
+      });
+      const json = (await res.json()) as { saved?: number; error?: string };
+      if (!res.ok) {
+        setPhase("reviewing");
+        setSaveError(json.error ?? "Failed to save cards — please try again.");
+        return;
+      }
+      setSavedCount(json.saved ?? accepted.length);
+      setDrafts([]);
+      setSessionId(null);
+      setText("");
+      setCount(5);
+      setGenerateError(null);
+      setPhase("saved");
+    } catch {
+      setPhase("reviewing");
+      setSaveError("Network error — please try again.");
+    }
+  }
+
+  const showForm = phase === "idle" || phase === "generating" || phase === "saved";
+  const showCards = (phase === "reviewing" || phase === "saving") && drafts.length > 0;
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <ServerError message={errorMessage} />
-
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <label htmlFor="source-text" className="text-sm font-medium text-blue-100/80">
-            Source text
-          </label>
-          <span className={`text-xs ${isOverCap ? "text-red-400" : "text-blue-100/50"}`}>
-            {text.length} / {MAX_TEXT_LENGTH}
-          </span>
+      {phase === "saved" && (
+        <div className="rounded-xl border border-green-500/30 bg-green-900/30 p-4">
+          <p className="text-sm font-medium text-green-300">
+            {savedCount} card{savedCount !== 1 ? "s" : ""} saved to your deck.
+          </p>
+          <a href="/deck" className="mt-1 inline-block text-sm text-purple-300 underline hover:text-purple-200">
+            View Deck →
+          </a>
         </div>
-        <textarea
-          id="source-text"
-          value={text}
-          onChange={(e) => {
-            setText(e.target.value);
-          }}
-          rows={8}
-          placeholder="Paste your source text here…"
-          className="w-full resize-none rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white placeholder-blue-100/30 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
-        />
-      </div>
+      )}
 
-      <div className="flex items-center gap-4">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="card-count" className="text-sm font-medium text-blue-100/80">
-            Number of cards
-          </label>
-          <input
-            id="card-count"
-            type="number"
-            min={MIN_COUNT}
-            max={MAX_COUNT}
-            value={count}
-            onChange={(e) => {
-              setCount(Number(e.target.value));
-            }}
-            className="w-24 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
-          />
-        </div>
+      {showForm && (
+        <>
+          <ServerError message={generateError} />
 
-        <Button
-          onClick={handleGenerate}
-          disabled={!canGenerate}
-          className="mt-5 rounded-lg bg-purple-600 px-6 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
-        >
-          {status === "loading" ? (
-            <span className="flex items-center gap-2">
-              <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Generating…
-            </span>
-          ) : (
-            "Generate"
-          )}
-        </Button>
-      </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="source-text" className="text-sm font-medium text-blue-100/80">
+                Source text
+              </label>
+              <span className={`text-xs ${isOverCap ? "text-red-400" : "text-blue-100/50"}`}>
+                {text.length} / {MAX_TEXT_LENGTH}
+              </span>
+            </div>
+            <textarea
+              id="source-text"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+              }}
+              rows={8}
+              placeholder="Paste your source text here…"
+              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white placeholder-blue-100/30 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
+            />
+          </div>
 
-      {status === "success" && cards.length > 0 && (
-        <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-medium text-blue-100/80">
-            {cards.length} card{cards.length !== 1 ? "s" : ""} generated
-          </h2>
-          {cards.map((card) => (
-            <div key={card.id} className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-              <div className="mb-3">
-                <span className="mb-1 block text-xs font-semibold tracking-wide text-purple-300/70 uppercase">
-                  Front
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="card-count" className="text-sm font-medium text-blue-100/80">
+                Number of cards
+              </label>
+              <input
+                id="card-count"
+                type="number"
+                min={MIN_COUNT}
+                max={MAX_COUNT}
+                value={count}
+                onChange={(e) => {
+                  setCount(Number(e.target.value));
+                }}
+                className="w-24 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
+              />
+            </div>
+
+            <Button
+              onClick={handleGenerate}
+              disabled={!canGenerate}
+              className="mt-5 rounded-lg bg-purple-600 px-6 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+            >
+              {phase === "generating" ? (
+                <span className="flex items-center gap-2">
+                  <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Generating…
                 </span>
-                <p className="text-sm text-white">{card.front}</p>
-              </div>
-              <div className="border-t border-white/10 pt-3">
-                <span className="mb-1 block text-xs font-semibold tracking-wide text-blue-300/70 uppercase">Back</span>
-                <p className="text-sm text-blue-100/80">{card.back}</p>
-              </div>
+              ) : (
+                "Generate"
+              )}
+            </Button>
+          </div>
+        </>
+      )}
+
+      {showCards && (
+        <div className="flex flex-col gap-4">
+          <ServerError message={saveError} />
+
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-blue-100/80">
+              {drafts.length} card{drafts.length !== 1 ? "s" : ""} generated — review each one
+            </h2>
+            <span className="text-xs text-blue-100/50">{acceptedCount} accepted</span>
+          </div>
+
+          {drafts.map((card) => (
+            <div
+              key={card.id}
+              className={`rounded-xl border p-4 backdrop-blur-sm transition-colors ${
+                card.decision === "accepted"
+                  ? "border-green-500/40 bg-green-900/20"
+                  : card.decision === "rejected"
+                    ? "border-white/5 bg-white/5 opacity-50"
+                    : "border-white/10 bg-white/5"
+              }`}
+            >
+              {card.isEditing ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold tracking-wide text-purple-300/70 uppercase">Front</span>
+                    <textarea
+                      value={card.editedFront}
+                      onChange={(e) => {
+                        handleFrontChange(card.id, e.target.value);
+                      }}
+                      rows={3}
+                      className="w-full resize-none rounded-lg border border-white/10 bg-white/5 p-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold tracking-wide text-blue-300/70 uppercase">Back</span>
+                    <textarea
+                      value={card.editedBack}
+                      onChange={(e) => {
+                        handleBackChange(card.id, e.target.value);
+                      }}
+                      rows={3}
+                      className="w-full resize-none rounded-lg border border-white/10 bg-white/5 p-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      handleConfirmEdit(card.id);
+                    }}
+                    className="self-start rounded-lg bg-green-700 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                  >
+                    Confirm
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-3">
+                    <span className="mb-1 block text-xs font-semibold tracking-wide text-purple-300/70 uppercase">
+                      Front
+                    </span>
+                    <p className="text-sm text-white">{card.editedFront || card.front}</p>
+                  </div>
+                  <div className="mb-3 border-t border-white/10 pt-3">
+                    <span className="mb-1 block text-xs font-semibold tracking-wide text-blue-300/70 uppercase">
+                      Back
+                    </span>
+                    <p className="text-sm text-blue-100/80">{card.editedBack || card.back}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => {
+                        handleAccept(card.id);
+                      }}
+                      className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
+                        card.decision === "accepted"
+                          ? "bg-green-700 text-white hover:bg-green-600"
+                          : "border border-green-500/30 bg-transparent text-green-300 hover:bg-green-900/30"
+                      }`}
+                    >
+                      ✓ Accept
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleReject(card.id);
+                      }}
+                      className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
+                        card.decision === "rejected"
+                          ? "bg-white/20 text-white/60 hover:bg-white/25"
+                          : "border border-white/20 bg-transparent text-blue-100/60 hover:bg-white/10"
+                      }`}
+                    >
+                      ✗ Reject
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleEdit(card.id);
+                      }}
+                      className="rounded-lg border border-white/20 bg-transparent px-3 py-1 text-xs font-medium text-blue-100/60 transition-colors hover:bg-white/10"
+                    >
+                      ✎ Edit
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
+
+          <Button
+            onClick={handleSave}
+            disabled={acceptedCount === 0 || phase === "saving"}
+            className="rounded-lg bg-purple-600 px-6 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+          >
+            {phase === "saving" ? (
+              <span className="flex items-center gap-2">
+                <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Saving…
+              </span>
+            ) : (
+              `Save to Deck (${acceptedCount})`
+            )}
+          </Button>
         </div>
       )}
     </div>
