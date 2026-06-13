@@ -1,13 +1,14 @@
 ---
 import "../styles/global.css";
 import Banner from "@/components/Banner.astro";
+import Nav from "@/components/Nav.astro";
 import { getMissingConfigs } from "@/lib/config-status";
 
 interface Props {
   title?: string;
 }
 
-const { title = "10x Astro Starter" } = Astro.props;
+const { title = "10xCards" } = Astro.props;
 const missingConfigs = getMissingConfigs();
 ---
 
@@ -36,6 +37,7 @@ const missingConfigs = getMissingConfigs();
         </Banner>
       ))
     }
+    <Nav />
     <slot />
   </body>
 </html>
