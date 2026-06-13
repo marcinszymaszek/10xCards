@@ -1,9 +1,9 @@
 ---
 change_id: atomic-save-to-deck
 title: Accept/reject AI candidates and atomically save to deck
-status: implementing
+status: implemented
 created: 2026-06-09
-updated: 2026-06-12
+updated: 2026-06-13
 archived_at: null
 ---
 

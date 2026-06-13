@@ -407,12 +407,12 @@ This is the third migration in the project. The function targets the existing `f
 
 #### Automated
 
-- [x] 4.1 `pnpm run build` exits 0
-- [x] 4.2 `pnpm run lint` passes
+- [x] 4.1 `pnpm run build` exits 0 — 977de5d
+- [x] 4.2 `pnpm run lint` passes — 977de5d
 
 #### Manual
 
-- [x] 4.3 Refresh after generating shows pending cards (all decisions reset)
-- [x] 4.4 Generate second session: new cards replace old display
-- [x] 4.5 Refresh after saving: idle state (no pending drafts)
-- [x] 4.6 Unauthenticated visit redirects to /auth/signin
+- [x] 4.3 Refresh after generating shows pending cards (all decisions reset) — 977de5d
+- [x] 4.4 Generate second session: new cards replace old display — 977de5d
+- [x] 4.5 Refresh after saving: idle state (no pending drafts) — 977de5d
+- [x] 4.6 Unauthenticated visit redirects to /auth/signin — 977de5d
