@@ -199,16 +199,16 @@ export default function GenerationView({ initialDrafts }: Props) {
       )}
 
       {showForm && (
-        <div className="rounded-2xl border border-purple-500/20 bg-purple-950/40 p-8 backdrop-blur-sm">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
           <h1 className="mb-1 text-2xl font-bold text-white">Generate Flashcards</h1>
-          <p className="mb-6 text-sm text-purple-100/60">
+          <p className="mb-6 text-sm text-blue-100/60">
             Paste text, choose the number of cards, AI will propose them — you decide which go to your deck.
           </p>
 
           <ServerError message={generateError} />
 
           <div className="mb-4 flex flex-col gap-2">
-            <label htmlFor="source-text" className="text-sm font-medium text-purple-100/80">
+            <label htmlFor="source-text" className="text-sm font-medium text-blue-100/80">
               Source text
             </label>
             <textarea
@@ -219,15 +219,15 @@ export default function GenerationView({ initialDrafts }: Props) {
               }}
               rows={12}
               placeholder="Paste the text from which AI should create flashcards…"
-              className="w-full resize-none rounded-lg border border-purple-400/40 bg-purple-900/20 p-3 text-sm text-white placeholder-purple-200/30 outline-none focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/40"
+              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white placeholder-blue-100/30 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
             />
-            <p className={`text-right text-xs ${isOverCap ? "text-red-400" : "text-purple-100/40"}`}>
+            <p className={`text-right text-xs ${isOverCap ? "text-red-400" : "text-blue-100/40"}`}>
               {text.length.toLocaleString()} / {MAX_TEXT_LENGTH.toLocaleString()} characters
             </p>
           </div>
 
           <div className="mb-6 flex flex-col gap-1">
-            <label htmlFor="card-count" className="text-sm font-medium text-purple-100/80">
+            <label htmlFor="card-count" className="text-sm font-medium text-blue-100/80">
               Number of cards
             </label>
             <input
@@ -239,9 +239,9 @@ export default function GenerationView({ initialDrafts }: Props) {
               onChange={(e) => {
                 setCount(Number(e.target.value));
               }}
-              className="w-24 rounded-lg border border-purple-400/40 bg-purple-900/20 px-3 py-2 text-sm text-white outline-none focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/40"
+              className="w-24 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
             />
-            <p className="text-xs text-purple-100/40">
+            <p className="text-xs text-blue-100/40">
               This is a suggestion for AI — you may get a few more or fewer cards.
             </p>
           </div>
