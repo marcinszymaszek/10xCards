@@ -123,6 +123,15 @@ export default function GenerationView({ initialDrafts }: Props) {
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, editedBack: value } : d)));
   }
 
+  async function callPromote(accepted: { id: string; front: string; back: string }[]) {
+    const res = await fetch("/api/drafts/promote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: sessionId, accepted }),
+    });
+    return res;
+  }
+
   async function handleSave() {
     if (!sessionId || acceptedCount === 0) return;
     setPhase("saving");
@@ -131,11 +140,7 @@ export default function GenerationView({ initialDrafts }: Props) {
       .filter((d) => d.decision === "accepted")
       .map((d) => ({ id: d.id, front: d.editedFront || d.front, back: d.editedBack || d.back }));
     try {
-      const res = await fetch("/api/drafts/promote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, accepted }),
-      });
+      const res = await callPromote(accepted);
       const json = (await res.json()) as { saved?: number; error?: string };
       if (!res.ok) {
         setPhase("reviewing");
@@ -149,6 +154,28 @@ export default function GenerationView({ initialDrafts }: Props) {
       setCount(5);
       setGenerateError(null);
       setPhase("saved");
+    } catch {
+      setPhase("reviewing");
+      setSaveError("Network error — please try again.");
+    }
+  }
+
+  async function handleDiscard() {
+    if (!sessionId) {
+      setDrafts([]);
+      setSessionId(null);
+      setPhase("idle");
+      return;
+    }
+    setPhase("saving");
+    setSaveError(null);
+    try {
+      await callPromote([]);
+      setDrafts([]);
+      setSessionId(null);
+      setText("");
+      setCount(5);
+      setPhase("idle");
     } catch {
       setPhase("reviewing");
       setSaveError("Network error — please try again.");
@@ -249,7 +276,16 @@ export default function GenerationView({ initialDrafts }: Props) {
             <h2 className="text-sm font-medium text-blue-100/80">
               {drafts.length} card{drafts.length !== 1 ? "s" : ""} generated — review each one
             </h2>
-            <span className="text-xs text-blue-100/50">{acceptedCount} accepted</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-blue-100/50">{acceptedCount} accepted</span>
+              <Button
+                onClick={handleDiscard}
+                disabled={phase === "saving"}
+                className="rounded-lg border border-white/20 bg-transparent px-3 py-1 text-xs font-medium text-blue-100/60 transition-colors hover:bg-white/10 disabled:opacity-50"
+              >
+                Start new
+              </Button>
+            </div>
           </div>
 
           {drafts.map((card) => (
@@ -352,10 +388,10 @@ export default function GenerationView({ initialDrafts }: Props) {
           <Button
             onClick={handleSave}
             disabled={acceptedCount === 0 || phase === "saving"}
-            className="rounded-lg bg-purple-600 px-6 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+            className="w-full rounded-lg bg-purple-600 py-3 font-medium text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {phase === "saving" ? (
-              <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center gap-2">
                 <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 Saving…
               </span>

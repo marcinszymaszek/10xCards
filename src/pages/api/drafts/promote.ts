@@ -58,8 +58,8 @@ export const POST: APIRoute = async (context) => {
     });
   }
 
-  if (!Array.isArray(accepted) || accepted.length === 0 || !accepted.every(isAcceptedCard)) {
-    return new Response(JSON.stringify({ error: "Must accept at least one card" }), {
+  if (!Array.isArray(accepted) || !accepted.every(isAcceptedCard)) {
+    return new Response(JSON.stringify({ error: "Invalid accepted cards payload" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
     });
