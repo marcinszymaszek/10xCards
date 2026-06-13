@@ -34,11 +34,8 @@ if (supabase) {
 ---
 
 <Layout title="Generate Flashcards">
-  <div class="bg-cosmic min-h-screen p-6 text-white">
+  <div class="bg-cosmic min-h-[calc(100vh-53px)] p-6 text-white">
     <div class="mx-auto max-w-2xl">
-      <h1 class="mb-8 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
-        Generate Flashcards
-      </h1>
       <GenerationView client:load initialDrafts={initialDrafts} />
     </div>
   </div>

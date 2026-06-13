@@ -159,7 +159,7 @@ export default function GenerationView({ initialDrafts }: Props) {
   const showCards = (phase === "reviewing" || phase === "saving") && drafts.length > 0;
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       {phase === "saved" && (
         <div className="rounded-xl border border-green-500/30 bg-green-900/30 p-4">
           <p className="text-sm font-medium text-green-300">
@@ -172,10 +172,17 @@ export default function GenerationView({ initialDrafts }: Props) {
       )}
 
       {showForm && (
-        <>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
+          <h1 className="mb-1 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-2xl font-bold text-transparent">
+            Generate Flashcards
+          </h1>
+          <p className="mb-6 text-sm text-blue-100/60">
+            Paste text below and let AI generate flashcard candidates for you.
+          </p>
+
           <ServerError message={generateError} />
 
-          <div className="flex flex-col gap-2">
+          <div className="mb-4 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <label htmlFor="source-text" className="text-sm font-medium text-blue-100/80">
                 Source text
@@ -190,46 +197,56 @@ export default function GenerationView({ initialDrafts }: Props) {
               onChange={(e) => {
                 setText(e.target.value);
               }}
-              rows={8}
+              rows={12}
               placeholder="Paste your source text here…"
               className="w-full resize-none rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white placeholder-blue-100/30 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
             />
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="card-count" className="text-sm font-medium text-blue-100/80">
-                Number of cards
-              </label>
-              <input
-                id="card-count"
-                type="number"
-                min={MIN_COUNT}
-                max={MAX_COUNT}
-                value={count}
-                onChange={(e) => {
-                  setCount(Number(e.target.value));
-                }}
-                className="w-24 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
-              />
-            </div>
-
-            <Button
-              onClick={handleGenerate}
-              disabled={!canGenerate}
-              className="mt-5 rounded-lg bg-purple-600 px-6 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
-            >
-              {phase === "generating" ? (
-                <span className="flex items-center gap-2">
-                  <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Generating…
-                </span>
-              ) : (
-                "Generate"
-              )}
-            </Button>
+          <div className="mb-6 flex flex-col gap-1">
+            <label htmlFor="card-count" className="text-sm font-medium text-blue-100/80">
+              Number of cards
+            </label>
+            <input
+              id="card-count"
+              type="number"
+              min={MIN_COUNT}
+              max={MAX_COUNT}
+              value={count}
+              onChange={(e) => {
+                setCount(Number(e.target.value));
+              }}
+              className="w-24 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
+            />
+            <p className="text-xs text-blue-100/40">
+              This is a suggestion for AI — you may get a few more or fewer cards.
+            </p>
           </div>
-        </>
+
+          <Button
+            onClick={handleGenerate}
+            disabled={!canGenerate}
+            className="w-full rounded-lg bg-purple-600 py-3 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+          >
+            {phase === "generating" ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Generating…
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-4">
+                  <path
+                    fillRule="evenodd"
+                    d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.75a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Generate flashcards
+              </span>
+            )}
+          </Button>
+        </div>
       )}
 
       {showCards && (
