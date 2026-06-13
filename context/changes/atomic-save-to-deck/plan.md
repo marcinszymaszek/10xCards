@@ -392,16 +392,16 @@ This is the third migration in the project. The function targets the existing `f
 
 #### Automated
 
-- [x] 3.1 `pnpm run lint` passes (React Compiler zero errors)
+- [x] 3.1 `pnpm run lint` passes (React Compiler zero errors) — 8fef939
 
 #### Manual
 
-- [x] 3.2 Accept/Reject buttons change card visual state
-- [x] 3.3 Edit opens inline textareas; Confirm auto-accepts with edited text
-- [x] 3.4 Save disabled when zero accepted; enabled when ≥ 1 accepted
-- [x] 3.5 Successful save shows "X cards saved" banner and View Deck link
-- [x] 3.6 Save failure shows ServerError banner; card decisions preserved
-- [x] 3.7 initialDrafts prop starts component in reviewing state
+- [x] 3.2 Accept/Reject buttons change card visual state — 8fef939
+- [x] 3.3 Edit opens inline textareas; Confirm auto-accepts with edited text — 8fef939
+- [x] 3.4 Save disabled when zero accepted; enabled when ≥ 1 accepted — 8fef939
+- [x] 3.5 Successful save shows "X cards saved" banner and View Deck link — 8fef939
+- [x] 3.6 Save failure shows ServerError banner; card decisions preserved — 8fef939
+- [x] 3.7 initialDrafts prop starts component in reviewing state — 8fef939
 
 ### Phase 4: Page — Generate Page Loads Pending Drafts
 

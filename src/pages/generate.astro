@@ -1,6 +1,36 @@
 ---
 import Layout from "@/layouts/Layout.astro";
-import GenerationView from "@/components/generate/GenerationView";
+import GenerationView, { type DraftCardInput } from "@/components/generate/GenerationView";
+import { createClient } from "@/lib/supabase";
+
+const supabase = createClient(Astro.request.headers, Astro.cookies);
+
+let initialDrafts: DraftCardInput[] = [];
+
+if (supabase) {
+  try {
+    const { data: sessionRow } = await supabase
+      .from("flashcard_drafts")
+      .select("generation_session_id")
+      .eq("state", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (sessionRow !== null) {
+      const { data: drafts } = await supabase
+        .from("flashcard_drafts")
+        .select("id, front, back, generation_session_id")
+        .eq("generation_session_id", sessionRow.generation_session_id)
+        .eq("state", "pending")
+        .order("created_at", { ascending: true });
+
+      initialDrafts = drafts ?? [];
+    }
+  } catch {
+    // SSR fetch failed — fall back to idle state
+  }
+}
 ---
 
 <Layout title="Generate Flashcards">
@@ -9,7 +39,7 @@ import GenerationView from "@/components/generate/GenerationView";
       <h1 class="mb-8 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-3xl font-bold text-transparent">
         Generate Flashcards
       </h1>
-      <GenerationView client:load />
+      <GenerationView client:load initialDrafts={initialDrafts} />
     </div>
   </div>
 </Layout>
