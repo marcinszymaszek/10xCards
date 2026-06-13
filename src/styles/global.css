@@ -121,4 +121,14 @@
   body {
     @apply bg-background text-foreground;
   }
+  button,
+  a,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  label[for],
+  select {
+    cursor: pointer;
+  }
 }

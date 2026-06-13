@@ -172,25 +172,18 @@ export default function GenerationView({ initialDrafts }: Props) {
       )}
 
       {showForm && (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
-          <h1 className="mb-1 bg-gradient-to-r from-blue-200 to-purple-200 bg-clip-text text-2xl font-bold text-transparent">
-            Generate Flashcards
-          </h1>
-          <p className="mb-6 text-sm text-blue-100/60">
-            Paste text below and let AI generate flashcard candidates for you.
+        <div className="rounded-2xl border border-purple-500/20 bg-purple-950/40 p-8 backdrop-blur-sm">
+          <h1 className="mb-1 text-2xl font-bold text-white">Generate Flashcards</h1>
+          <p className="mb-6 text-sm text-purple-100/60">
+            Paste text, choose the number of cards, AI will propose them — you decide which go to your deck.
           </p>
 
           <ServerError message={generateError} />
 
           <div className="mb-4 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <label htmlFor="source-text" className="text-sm font-medium text-blue-100/80">
-                Source text
-              </label>
-              <span className={`text-xs ${isOverCap ? "text-red-400" : "text-blue-100/50"}`}>
-                {text.length} / {MAX_TEXT_LENGTH}
-              </span>
-            </div>
+            <label htmlFor="source-text" className="text-sm font-medium text-purple-100/80">
+              Source text
+            </label>
             <textarea
               id="source-text"
               value={text}
@@ -198,13 +191,16 @@ export default function GenerationView({ initialDrafts }: Props) {
                 setText(e.target.value);
               }}
               rows={12}
-              placeholder="Paste your source text here…"
-              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white placeholder-blue-100/30 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
+              placeholder="Paste the text from which AI should create flashcards…"
+              className="w-full resize-none rounded-lg border border-purple-400/40 bg-purple-900/20 p-3 text-sm text-white placeholder-purple-200/30 outline-none focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/40"
             />
+            <p className={`text-right text-xs ${isOverCap ? "text-red-400" : "text-purple-100/40"}`}>
+              {text.length.toLocaleString()} / {MAX_TEXT_LENGTH.toLocaleString()} characters
+            </p>
           </div>
 
           <div className="mb-6 flex flex-col gap-1">
-            <label htmlFor="card-count" className="text-sm font-medium text-blue-100/80">
+            <label htmlFor="card-count" className="text-sm font-medium text-purple-100/80">
               Number of cards
             </label>
             <input
@@ -216,9 +212,9 @@ export default function GenerationView({ initialDrafts }: Props) {
               onChange={(e) => {
                 setCount(Number(e.target.value));
               }}
-              className="w-24 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
+              className="w-24 rounded-lg border border-purple-400/40 bg-purple-900/20 px-3 py-2 text-sm text-white outline-none focus:border-purple-400/70 focus:ring-1 focus:ring-purple-400/40"
             />
-            <p className="text-xs text-blue-100/40">
+            <p className="text-xs text-purple-100/40">
               This is a suggestion for AI — you may get a few more or fewer cards.
             </p>
           </div>
@@ -226,7 +222,7 @@ export default function GenerationView({ initialDrafts }: Props) {
           <Button
             onClick={handleGenerate}
             disabled={!canGenerate}
-            className="w-full rounded-lg bg-purple-600 py-3 font-medium text-white transition-colors hover:bg-purple-500 disabled:opacity-50"
+            className="w-full rounded-lg bg-purple-600 py-3 font-medium text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {phase === "generating" ? (
               <span className="flex items-center justify-center gap-2">
@@ -236,11 +232,7 @@ export default function GenerationView({ initialDrafts }: Props) {
             ) : (
               <span className="flex items-center justify-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-4">
-                  <path
-                    fillRule="evenodd"
-                    d="M14.615 1.595a.75.75 0 01.359.852L12.982 9.75h7.268a.75.75 0 01.548 1.262l-10.5 11.25a.75.75 0 01-1.272-.71l1.992-7.302H3.75a.75.75 0 01-.548-1.262l10.5-11.25a.75.75 0 01.913-.143z"
-                    clipRule="evenodd"
-                  />
+                  <path d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
                 </svg>
                 Generate flashcards
               </span>
