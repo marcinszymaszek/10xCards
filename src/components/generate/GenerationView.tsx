@@ -222,7 +222,7 @@ export default function GenerationView({ initialDrafts }: Props) {
               className="w-full resize-none rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white placeholder-blue-100/30 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
             />
             <p className={`text-right text-xs ${isOverCap ? "text-red-400" : "text-blue-100/40"}`}>
-              {text.length.toLocaleString()} / {MAX_TEXT_LENGTH.toLocaleString()} characters
+              {text.length.toLocaleString("en-US")} / {MAX_TEXT_LENGTH.toLocaleString("en-US")} characters
             </p>
           </div>
 

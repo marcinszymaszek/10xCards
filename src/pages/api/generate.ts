@@ -1,11 +1,18 @@
 import type { APIRoute } from "astro";
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase";
-import { ANTHROPIC_API_KEY } from "astro:env/server";
+import { OPENROUTER_API_KEY } from "astro:env/server";
 
 const MAX_TEXT_LENGTH = 10000;
 const MIN_COUNT = 1;
 const MAX_COUNT = 20;
+
+// OpenRouter tries each model in order — first available wins.
+// All listed models are currently free (:free suffix).
+const FREE_MODELS = [
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "openai/gpt-oss-20b:free",
+  "nousresearch/hermes-3-llama-3.1-405b:free",
+];
 
 interface GenerateRequestBody {
   text?: unknown;
@@ -15,6 +22,11 @@ interface GenerateRequestBody {
 interface GeneratedCard {
   front: string;
   back: string;
+}
+
+interface OpenRouterResponse {
+  choices?: { message?: { content?: string } }[];
+  error?: { message: string; code: number };
 }
 
 const FENCE_PATTERN = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
@@ -32,6 +44,55 @@ function isGeneratedCard(value: unknown): value is GeneratedCard {
     typeof (value as Record<string, unknown>).front === "string" &&
     typeof (value as Record<string, unknown>).back === "string"
   );
+}
+
+async function callOpenRouter(
+  apiKey: string,
+  count: number,
+  text: string,
+): Promise<GeneratedCard[]> {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      // Pass all models — OpenRouter automatically falls back to the next
+      // if the first is rate-limited or unavailable.
+      models: FREE_MODELS,
+      route: "fallback",
+      temperature: 0,
+      max_tokens: 4096,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a flashcard generator. Read the provided source text and produce exactly the requested " +
+            "number of flashcards, each capturing one discrete concept. Respond with ONLY a JSON array of " +
+            'objects shaped as {"front": string, "back": string} — no markdown fences, no commentary, no additional keys.',
+        },
+        {
+          role: "user",
+          content: `Generate ${count} flashcards from this text:\n\n${text}`,
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("[generate] OpenRouter error:", res.status, err);
+    throw new Error(`OpenRouter ${res.status}`);
+  }
+
+  const json = (await res.json()) as OpenRouterResponse;
+  const raw = json.choices?.[0]?.message?.content ?? "";
+  const parsed: unknown = JSON.parse(stripMarkdownFences(raw));
+  if (!Array.isArray(parsed) || !parsed.every(isGeneratedCard)) {
+    throw new Error("Unexpected generation response shape");
+  }
+  return parsed;
 }
 
 export const POST: APIRoute = async (context) => {
@@ -77,7 +138,7 @@ export const POST: APIRoute = async (context) => {
     });
   }
 
-  if (!ANTHROPIC_API_KEY) {
+  if (!OPENROUTER_API_KEY) {
     return new Response(JSON.stringify({ error: "Service unavailable" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -85,35 +146,12 @@ export const POST: APIRoute = async (context) => {
   }
 
   const sessionId = crypto.randomUUID();
-  const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
 
   let cards: GeneratedCard[];
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      temperature: 0,
-      max_tokens: 4096,
-      system:
-        "You are a flashcard generator. Read the provided source text and produce exactly the requested " +
-        "number of flashcards, each capturing one discrete concept. Respond with ONLY a JSON array of " +
-        'objects shaped as {"front": string, "back": string} — no markdown fences, no commentary, no ' +
-        "additional keys.",
-      messages: [
-        {
-          role: "user",
-          content: `Generate ${count} flashcards from this text:\n\n${text}`,
-        },
-      ],
-    });
-
-    const block = response.content[0];
-    const raw = block.type === "text" ? block.text : "";
-    const parsed: unknown = JSON.parse(stripMarkdownFences(raw));
-    if (!Array.isArray(parsed) || !parsed.every(isGeneratedCard)) {
-      throw new Error("Unexpected generation response shape");
-    }
-    cards = parsed;
-  } catch {
+    cards = await callOpenRouter(OPENROUTER_API_KEY, count, text);
+  } catch (e) {
+    console.error("[generate] error:", e);
     return new Response(JSON.stringify({ error: "Failed to generate flashcards — please try again" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
