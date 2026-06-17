@@ -408,7 +408,7 @@ export default function DeckBrowser({
             setShowAddForm((v) => !v);
             setAddError(null);
           }}
-          className="text-sm text-blue-100/50 transition-colors hover:text-blue-100/80"
+          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white transition-colors hover:bg-white/20"
         >
           {showAddForm ? "Cancel" : "+ Add manually"}
         </button>
