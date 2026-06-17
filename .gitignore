@@ -1,4 +1,10 @@
 .claude/**/10x-*
+.claude/**/.10x-*
+
+# planning / AI context artifacts
+context/changes/
+context/foundation/roadmap.md
+context/foundation/tasks-linear.md
 # from 10x-astro-starter
 # build output
 dist/
