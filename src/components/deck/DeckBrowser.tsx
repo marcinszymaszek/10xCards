@@ -245,6 +245,11 @@ export default function DeckBrowser({
   const [loading, setLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addFront, setAddFront] = useState("");
+  const [addBack, setAddBack] = useState("");
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -305,6 +310,41 @@ export default function DeckBrowser({
     setTotal((prev) => prev - 1);
   };
 
+  const handleAddCard = async (e: React.SyntheticEvent) => {
+    e.preventDefault();
+    const front = addFront.trim();
+    const back = addBack.trim();
+    if (!front || !back) {
+      setAddError("Front and back cannot be blank");
+      return;
+    }
+    setAddSaving(true);
+    setAddError(null);
+    try {
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ front, back }),
+      });
+      if (!res.ok) {
+        const raw: unknown = await res.json();
+        const body = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+        setAddError(typeof body.error === "string" ? body.error : "Failed to create card");
+        return;
+      }
+      const created = (await res.json()) as FlashCard;
+      setItems((prev) => [created, ...prev]);
+      setTotal((prev) => prev + 1);
+      setAddFront("");
+      setAddBack("");
+      setShowAddForm(false);
+    } catch {
+      setAddError("Network error — please try again");
+    } finally {
+      setAddSaving(false);
+    }
+  };
+
   const handleUndo = () => {
     if (!pendingDelete) return;
     clearTimeout(pendingDelete.timer);
@@ -360,6 +400,78 @@ export default function DeckBrowser({
           Search
         </button>
       </form>
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setShowAddForm((v) => !v);
+            setAddError(null);
+          }}
+          className="text-sm text-blue-100/50 transition-colors hover:text-blue-100/80"
+        >
+          {showAddForm ? "Cancel" : "+ Add manually"}
+        </button>
+      </div>
+
+      {showAddForm && (
+        <form
+          onSubmit={handleAddCard}
+          className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
+        >
+          {addError && (
+            <div className="mb-1">
+              <ServerError message={addError} />
+            </div>
+          )}
+          <div>
+            <label className="text-xs font-semibold tracking-wider text-blue-300/70 uppercase">Front</label>
+            <textarea
+              value={addFront}
+              onChange={(e) => {
+                setAddFront(e.target.value);
+              }}
+              rows={2}
+              placeholder="Question or concept…"
+              className="mt-1 w-full resize-none rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:border-blue-400/50 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold tracking-wider text-purple-300/70 uppercase">Back</label>
+            <textarea
+              value={addBack}
+              onChange={(e) => {
+                setAddBack(e.target.value);
+              }}
+              rows={2}
+              placeholder="Answer or definition…"
+              className="mt-1 w-full resize-none rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:border-purple-400/50 focus:outline-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={addSaving}
+              className="rounded-lg border border-purple-500/40 bg-purple-600/30 px-4 py-1.5 text-sm font-medium text-purple-200 transition-colors hover:bg-purple-600/50 disabled:opacity-50"
+            >
+              {addSaving ? "Saving…" : "Save card"}
+            </button>
+            <button
+              type="button"
+              disabled={addSaving}
+              onClick={() => {
+                setShowAddForm(false);
+                setAddFront("");
+                setAddBack("");
+                setAddError(null);
+              }}
+              className="rounded-lg border border-white/20 bg-white/10 px-4 py-1.5 text-sm text-white transition-colors hover:bg-white/20 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {listError && <ServerError message={listError} />}
 

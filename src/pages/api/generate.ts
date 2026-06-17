@@ -46,11 +46,7 @@ function isGeneratedCard(value: unknown): value is GeneratedCard {
   );
 }
 
-async function callOpenRouter(
-  apiKey: string,
-  count: number,
-  text: string,
-): Promise<GeneratedCard[]> {
+async function callOpenRouter(apiKey: string, count: number, text: string): Promise<GeneratedCard[]> {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
