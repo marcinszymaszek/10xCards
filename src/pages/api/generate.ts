@@ -78,7 +78,11 @@ async function callOpenRouter(apiKey: string, count: number, text: string): Prom
 
   if (!res.ok) {
     const err = await res.text();
-    console.error("[generate] OpenRouter error:", res.status, err);
+    if (res.status === 401 || res.status === 403) {
+      console.error("[generate] OpenRouter AUTH FAILURE — check OPENROUTER_API_KEY in .dev.vars:", res.status, err);
+    } else {
+      console.error("[generate] OpenRouter error:", res.status, err);
+    }
     throw new Error(`OpenRouter ${res.status}`);
   }
 
