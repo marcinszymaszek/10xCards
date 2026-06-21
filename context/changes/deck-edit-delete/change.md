@@ -1,9 +1,9 @@
 ---
 change_id: deck-edit-delete
 title: Deck view with per-card edit and delete
-status: implementing
+status: implemented
 created: 2026-06-06
-updated: 2026-06-06
+updated: 2026-06-21
 archived_at: null
 ---
 
