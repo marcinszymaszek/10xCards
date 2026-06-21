@@ -23,6 +23,8 @@ interface DraftCard {
   back: string;
   editedFront: string;
   editedBack: string;
+  preEditFront: string;
+  preEditBack: string;
   decision: "pending" | "accepted" | "rejected";
   isEditing: boolean;
 }
@@ -36,6 +38,8 @@ function toDraftCard(d: DraftCardInput): DraftCard {
     back: d.back,
     editedFront: "",
     editedBack: "",
+    preEditFront: "",
+    preEditBack: "",
     decision: "pending",
     isEditing: false,
   };
@@ -43,7 +47,7 @@ function toDraftCard(d: DraftCardInput): DraftCard {
 
 export default function GenerationView({ initialDrafts }: Props) {
   const [text, setText] = useState("");
-  const [count, setCount] = useState(5);
+  const [countInput, setCountInput] = useState("5");
   const [phase, setPhase] = useState<Phase>(() => (initialDrafts && initialDrafts.length > 0 ? "reviewing" : "idle"));
   const [drafts, setDrafts] = useState<DraftCard[]>(() => initialDrafts?.map(toDraftCard) ?? []);
   const [sessionId, setSessionId] = useState<string | null>(initialDrafts?.[0]?.generation_session_id ?? null);
@@ -52,7 +56,9 @@ export default function GenerationView({ initialDrafts }: Props) {
   const [savedCount, setSavedCount] = useState(0);
 
   const isOverCap = text.length > MAX_TEXT_LENGTH;
-  const canGenerate = text.trim().length > 0 && !isOverCap && phase !== "generating";
+  const count = Number(countInput);
+  const isCountValid = countInput.trim() !== "" && Number.isInteger(count) && count >= MIN_COUNT && count <= MAX_COUNT;
+  const canGenerate = text.trim().length > 0 && !isOverCap && isCountValid && phase !== "generating";
   const acceptedCount = drafts.filter((d) => d.decision === "accepted").length;
 
   async function handleGenerate() {
@@ -82,6 +88,8 @@ export default function GenerationView({ initialDrafts }: Props) {
           back: c.back,
           editedFront: "",
           editedBack: "",
+          preEditFront: "",
+          preEditBack: "",
           decision: "pending" as const,
           isEditing: false,
         })),
@@ -103,16 +111,25 @@ export default function GenerationView({ initialDrafts }: Props) {
 
   function handleEdit(id: string) {
     setDrafts((prev) =>
-      prev.map((d) =>
-        d.id === id
-          ? { ...d, isEditing: true, editedFront: d.editedFront || d.front, editedBack: d.editedBack || d.back }
-          : d,
-      ),
+      prev.map((d) => {
+        if (d.id !== id) return d;
+        const front = d.editedFront || d.front;
+        const back = d.editedBack || d.back;
+        return { ...d, isEditing: true, editedFront: front, editedBack: back, preEditFront: front, preEditBack: back };
+      }),
     );
   }
 
   function handleConfirmEdit(id: string) {
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, isEditing: false, decision: "accepted" as const } : d)));
+  }
+
+  function handleCancelEdit(id: string) {
+    setDrafts((prev) =>
+      prev.map((d) =>
+        d.id === id ? { ...d, isEditing: false, editedFront: d.preEditFront, editedBack: d.preEditBack } : d,
+      ),
+    );
   }
 
   function handleFrontChange(id: string, value: string) {
@@ -151,7 +168,7 @@ export default function GenerationView({ initialDrafts }: Props) {
       setDrafts([]);
       setSessionId(null);
       setText("");
-      setCount(5);
+      setCountInput("5");
       setGenerateError(null);
       setPhase("saved");
     } catch {
@@ -174,7 +191,7 @@ export default function GenerationView({ initialDrafts }: Props) {
       setDrafts([]);
       setSessionId(null);
       setText("");
-      setCount(5);
+      setCountInput("5");
       setPhase("idle");
     } catch {
       setPhase("reviewing");
@@ -235,14 +252,25 @@ export default function GenerationView({ initialDrafts }: Props) {
               type="number"
               min={MIN_COUNT}
               max={MAX_COUNT}
-              value={count}
+              value={countInput}
               onChange={(e) => {
-                setCount(Number(e.target.value));
+                setCountInput(e.target.value);
               }}
-              className="w-24 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
+              onBlur={() => {
+                if (countInput.trim() === "") return;
+                const clamped = Math.min(MAX_COUNT, Math.max(MIN_COUNT, Math.round(count) || MIN_COUNT));
+                setCountInput(String(clamped));
+              }}
+              className={`w-24 rounded-lg border bg-white/5 px-3 py-2 text-sm text-white outline-none focus:ring-1 ${
+                isCountValid
+                  ? "border-white/10 focus:border-purple-500/50 focus:ring-purple-500/50"
+                  : "border-red-400/50 focus:border-red-400/50 focus:ring-red-400/50"
+              }`}
             />
-            <p className="text-xs text-blue-100/40">
-              This is a suggestion for AI — you may get a few more or fewer cards.
+            <p className={`text-xs ${isCountValid ? "text-blue-100/40" : "text-red-400"}`}>
+              {isCountValid
+                ? "This is a suggestion for AI — you may get a few more or fewer cards."
+                : `Enter a number between ${MIN_COUNT} and ${MAX_COUNT}.`}
             </p>
           </div>
 
@@ -323,14 +351,24 @@ export default function GenerationView({ initialDrafts }: Props) {
                       className="w-full resize-none rounded-lg border border-white/10 bg-white/5 p-2 text-sm text-white outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50"
                     />
                   </div>
-                  <Button
-                    onClick={() => {
-                      handleConfirmEdit(card.id);
-                    }}
-                    className="self-start rounded-lg bg-green-700 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-600"
-                  >
-                    Confirm
-                  </Button>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button
+                      onClick={() => {
+                        handleConfirmEdit(card.id);
+                      }}
+                      className="w-full rounded-lg bg-green-700 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-600 sm:w-auto"
+                    >
+                      Confirm
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        handleCancelEdit(card.id);
+                      }}
+                      className="w-full rounded-lg border border-white/20 bg-transparent px-4 py-1.5 text-sm font-medium text-blue-100/60 transition-colors hover:bg-white/10 sm:w-auto"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -346,12 +384,12 @@ export default function GenerationView({ initialDrafts }: Props) {
                     </span>
                     <p className="text-sm text-blue-100/80">{card.editedBack || card.back}</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       onClick={() => {
                         handleAccept(card.id);
                       }}
-                      className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
+                      className={`w-full rounded-lg px-3 py-1 text-xs font-medium transition-colors sm:w-auto ${
                         card.decision === "accepted"
                           ? "bg-green-700 text-white hover:bg-green-600"
                           : "border border-green-500/30 bg-transparent text-green-300 hover:bg-green-900/30"
@@ -363,7 +401,7 @@ export default function GenerationView({ initialDrafts }: Props) {
                       onClick={() => {
                         handleReject(card.id);
                       }}
-                      className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${
+                      className={`w-full rounded-lg px-3 py-1 text-xs font-medium transition-colors sm:w-auto ${
                         card.decision === "rejected"
                           ? "bg-white/20 text-white/60 hover:bg-white/25"
                           : "border border-white/20 bg-transparent text-blue-100/60 hover:bg-white/10"
@@ -375,7 +413,7 @@ export default function GenerationView({ initialDrafts }: Props) {
                       onClick={() => {
                         handleEdit(card.id);
                       }}
-                      className="rounded-lg border border-white/20 bg-transparent px-3 py-1 text-xs font-medium text-blue-100/60 transition-colors hover:bg-white/10"
+                      className="w-full rounded-lg border border-white/20 bg-transparent px-3 py-1 text-xs font-medium text-blue-100/60 transition-colors hover:bg-white/10 sm:w-auto"
                     >
                       ✎ Edit
                     </Button>

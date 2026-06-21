@@ -3,21 +3,23 @@ const { user } = Astro.locals;
 const path = Astro.url.pathname;
 ---
 
-<nav class="flex items-center justify-between border-b border-white/10 bg-black/85 px-6 py-3 backdrop-blur-sm">
-  <a href="/" class="text-lg font-bold text-white">10xCards</a>
+<nav
+  class="flex items-center justify-between gap-2 border-b border-white/10 bg-black/85 px-4 py-3 backdrop-blur-sm sm:px-6"
+>
+  <a href="/" class="shrink-0 text-lg font-bold text-white">10xCards</a>
 
   {
     user && (
-      <div class="flex items-center gap-6">
+      <div class="flex min-w-0 items-center gap-3 sm:gap-6">
         <a
           href="/generate"
-          class:list={`text-sm transition-colors ${path === "/generate" ? "text-white" : "text-blue-100/70 hover:text-white"}`}
+          class:list={`shrink-0 text-sm transition-colors ${path === "/generate" ? "text-white" : "text-blue-100/70 hover:text-white"}`}
         >
           Generate
         </a>
         <a
           href="/deck"
-          class:list={`text-sm transition-colors ${path === "/deck" ? "text-white" : "text-blue-100/70 hover:text-white"}`}
+          class:list={`shrink-0 text-sm transition-colors ${path === "/deck" ? "text-white" : "text-blue-100/70 hover:text-white"}`}
         >
           Deck
         </a>
@@ -25,13 +27,13 @@ const path = Astro.url.pathname;
     )
   }
 
-  <div class="flex items-center gap-4">
+  <div class="flex shrink-0 items-center gap-3 sm:gap-4">
     {
       user ? (
         <>
-          <span class="text-xs text-blue-100/50">{user.email}</span>
+          <span class="hidden truncate text-xs text-blue-100/50 sm:inline">{user.email}</span>
           <form method="POST" action="/api/auth/signout">
-            <button type="submit" class="text-sm text-blue-100/70 transition-colors hover:text-white">
+            <button type="submit" class="shrink-0 text-sm text-blue-100/70 transition-colors hover:text-white">
               Sign out
             </button>
           </form>

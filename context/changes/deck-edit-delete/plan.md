@@ -36,9 +36,10 @@ What is absent:
 - Soft-delete (PRD §FR-008 Socrates; deferred to v2).
 - Undo for edits (PRD §FR-007 Socrates; deferred to v2).
 - Bulk edit or bulk delete.
-- Auto-save / optimistic updates.
-- Pagination or search within the deck (single-user MVP; deck size manageable without it).
+- Auto-save / optimistic updates for edits.
 - `/review` route protection — added in S-04.
+
+> **Scope note (added during implementation, post-hoc per `/10x-plan-review`):** pagination and search within the deck were originally listed here as out of scope, but shipped anyway once the list grew during testing — see the updated Phase 2 contract below. A 5s undo window on delete also shipped, beyond the "no undo" decision above (undo-for-edits remains out of scope; undo-for-delete does not).
 
 ## Implementation Approach
 
@@ -112,7 +113,7 @@ The `/deck` Astro page mounts a React island (`DeckView`) that fetches the user'
 
 #### 1. Deck island component
 
-**File**: `src/components/deck/DeckView.tsx`
+**File**: `src/components/deck/DeckBrowser.tsx`
 
 **Intent**: Render the full deck management experience — card list, per-card edit mode, and delete confirmation — in a single React island following the established auth form pattern.
 
@@ -136,14 +137,17 @@ Empty state: when `cards` is empty, show a message directing the user to `/gener
 
 **File**: `src/pages/api/cards/index.ts`
 
-**Intent**: Return all accepted flashcards belonging to the current user, ordered newest-first.
+**Intent**: Return the current user's flashcards, paginated and optionally filtered by search text, newest-first.
 
-**Contract**:
+**Contract** (as shipped — supersedes the original flat-list version):
 
 - Export `export const GET: APIRoute`.
 - Guard `if (!supabase)` → 500; guard `if (!user)` → 401.
-- `supabase.from("flashcards").select("id, front, back, created_at").order("created_at", { ascending: false })` — RLS scopes to the current user automatically.
-- Return `{ cards: [...] }` with 200.
+- Query params: `page` (default 1), `pageSize` (default/cap via `DEFAULT_PAGE_SIZE`/`MAX_PAGE_SIZE`), `q` (free-text search over front/back).
+- Delegates to `listCards()` in `src/lib/cards.ts`; RLS scopes rows to the current user automatically.
+- Return `{ items: [...], total, page, pageSize }` with 200.
+
+**Delete-undo (shipped, not originally planned)**: `DeckBrowser.tsx` removes a deleted card from the list immediately but defers the real `DELETE /api/cards/<id>` call behind a 5s client-side timer, surfacing an "Undo" action during that window. See `/10x-plan-review` finding F2 (`reviews/plan-review.md`) for the known edge case: navigating away inside the 5s window skips the server-side delete.
 
 #### 3. Deck page
 

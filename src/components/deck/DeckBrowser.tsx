@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ServerError } from "@/components/auth/ServerError";
 import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -127,12 +127,12 @@ function CardItem({
             </div>
             <OriginBadge origin={card.origin} />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <button
               onClick={() => {
                 setMode("editing");
               }}
-              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/20"
+              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/20 sm:w-auto"
             >
               Edit
             </button>
@@ -140,7 +140,7 @@ function CardItem({
               onClick={() => {
                 setMode("confirm-delete");
               }}
-              className="rounded-lg border border-red-500/30 bg-red-900/20 px-3 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-900/40"
+              className="w-full rounded-lg border border-red-500/30 bg-red-900/20 px-3 py-1.5 text-sm text-red-300 transition-colors hover:bg-red-900/40 sm:w-auto"
             >
               Delete
             </button>
@@ -174,18 +174,18 @@ function CardItem({
               />
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="rounded-lg border border-blue-400/40 bg-blue-600/30 px-3 py-1.5 text-sm text-blue-200 transition-colors hover:bg-blue-600/50 disabled:opacity-50"
+              className="w-full rounded-lg border border-blue-400/40 bg-blue-600/30 px-3 py-1.5 text-sm text-blue-200 transition-colors hover:bg-blue-600/50 disabled:opacity-50 sm:w-auto"
             >
               {saving ? "Saving…" : "Save"}
             </button>
             <button
               onClick={handleCancelEdit}
               disabled={saving}
-              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/20 disabled:opacity-50"
+              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/20 disabled:opacity-50 sm:w-auto"
             >
               Cancel
             </button>
@@ -196,12 +196,12 @@ function CardItem({
       {mode === "confirm-delete" && (
         <>
           <p className="mb-3 text-sm text-red-300">Delete this card? This cannot be undone.</p>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <button
               onClick={() => {
                 onDelete(card);
               }}
-              className="rounded-lg border border-red-500/40 bg-red-900/40 px-3 py-1.5 text-sm text-red-200 transition-colors hover:bg-red-900/60"
+              className="w-full rounded-lg border border-red-500/40 bg-red-900/40 px-3 py-1.5 text-sm text-red-200 transition-colors hover:bg-red-900/60 sm:w-auto"
             >
               Confirm
             </button>
@@ -210,7 +210,7 @@ function CardItem({
                 setError(null);
                 setMode("idle");
               }}
-              className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/20"
+              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/20 sm:w-auto"
             >
               Cancel
             </button>
@@ -250,6 +250,36 @@ export default function DeckBrowser({
   const [addBack, setAddBack] = useState("");
   const [addSaving, setAddSaving] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+
+  const pendingDeleteRef = useRef<PendingDelete | null>(null);
+  useEffect(() => {
+    pendingDeleteRef.current = pendingDelete;
+  }, [pendingDelete]);
+
+  // The 5s undo window is client-side only — if the tab is hidden or the page
+  // unloads before it elapses, flush the queued delete immediately so it
+  // isn't silently dropped (the card would otherwise survive server-side
+  // despite having visually disappeared).
+  useEffect(() => {
+    const flushPendingDelete = () => {
+      const current = pendingDeleteRef.current;
+      if (!current) return;
+      clearTimeout(current.timer);
+      fetch(`/api/cards/${current.card.id}`, { method: "DELETE" }).catch(() => {
+        // Best-effort: the page is already closing/hidden, nothing to surface.
+      });
+      pendingDeleteRef.current = null;
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flushPendingDelete();
+    };
+    window.addEventListener("beforeunload", flushPendingDelete);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("beforeunload", flushPendingDelete);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -401,18 +431,20 @@ export default function DeckBrowser({
         </button>
       </form>
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => {
-            setShowAddForm((v) => !v);
-            setAddError(null);
-          }}
-          className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white transition-colors hover:bg-white/20"
-        >
-          {showAddForm ? "Cancel" : "+ Add manually"}
-        </button>
-      </div>
+      {!showAddForm && (
+        <div className="flex sm:justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setShowAddForm(true);
+              setAddError(null);
+            }}
+            className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white transition-colors hover:bg-white/20 sm:w-auto"
+          >
+            + Add manually
+          </button>
+        </div>
+      )}
 
       {showAddForm && (
         <form
@@ -448,11 +480,11 @@ export default function DeckBrowser({
               className="mt-1 w-full resize-none rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white placeholder-white/30 focus:border-purple-400/50 focus:outline-none"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="submit"
               disabled={addSaving}
-              className="rounded-lg border border-purple-500/40 bg-purple-600/30 px-4 py-1.5 text-sm font-medium text-purple-200 transition-colors hover:bg-purple-600/50 disabled:opacity-50"
+              className="w-full rounded-lg border border-purple-500/40 bg-purple-600/30 px-4 py-1.5 text-sm font-medium text-purple-200 transition-colors hover:bg-purple-600/50 disabled:opacity-50 sm:w-auto"
             >
               {addSaving ? "Saving…" : "Save card"}
             </button>
@@ -465,7 +497,7 @@ export default function DeckBrowser({
                 setAddBack("");
                 setAddError(null);
               }}
-              className="rounded-lg border border-white/20 bg-white/10 px-4 py-1.5 text-sm text-white transition-colors hover:bg-white/20 disabled:opacity-50"
+              className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-1.5 text-sm text-white transition-colors hover:bg-white/20 disabled:opacity-50 sm:w-auto"
             >
               Cancel
             </button>
