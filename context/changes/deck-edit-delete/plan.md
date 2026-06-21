@@ -239,11 +239,11 @@ Empty state: when `cards` is empty, show a message directing the user to `/gener
 
 #### Manual
 
-- [ ] 2.3 Unauthenticated visit to `/deck` redirects to `/auth/signin`
-- [ ] 2.4 Deck page lists all accepted cards
-- [ ] 2.5 Edit → Save persists change
-- [ ] 2.6 Edit → Cancel leaves card unchanged
-- [ ] 2.7 Delete → Confirm removes card
-- [ ] 2.8 Delete → Cancel leaves card intact
-- [ ] 2.9 Blank field save shows inline error; card remains editable
-- [ ] 2.10 Empty deck shows prompt linking to `/generate`
+- [x] 2.3 Unauthenticated visit to `/deck` redirects to `/auth/signin`
+- [x] 2.4 Deck page lists all accepted cards
+- [x] 2.5 Edit → Save persists change
+- [x] 2.6 Edit → Cancel leaves card unchanged
+- [x] 2.7 Delete → Confirm removes card
+- [x] 2.8 Delete → Cancel leaves card intact
+- [x] 2.9 Blank field save shows inline error; card remains editable
+- [x] 2.10 Empty deck shows prompt linking to `/generate`
