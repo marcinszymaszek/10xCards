@@ -53,6 +53,7 @@ async function callOpenRouter(apiKey: string, count: number, text: string): Prom
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
+    signal: AbortSignal.timeout(10000),
     body: JSON.stringify({
       // Pass all models — OpenRouter automatically falls back to the next
       // if the first is rate-limited or unavailable.
@@ -151,6 +152,13 @@ export const POST: APIRoute = async (context) => {
   try {
     cards = await callOpenRouter(OPENROUTER_API_KEY, count, text);
   } catch (e) {
+    if (e instanceof Error && e.name === "TimeoutError") {
+      console.error("[generate] OpenRouter request timed out after 10s");
+      return new Response(JSON.stringify({ error: "Generation timed out — please try again" }), {
+        status: 504,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     console.error("[generate] error:", e);
     return new Response(JSON.stringify({ error: "Failed to generate flashcards — please try again" }), {
       status: 500,

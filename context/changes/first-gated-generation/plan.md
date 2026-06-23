@@ -317,6 +317,8 @@ First migration in the project. Apply locally with `pnpm exec supabase db reset`
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
+> **Live verification note (2026-06-23)**: Manual rows 2.3–2.7, 3.2–3.6, 4.3–4.5 were originally checked off from code inspection only (flagged as F1 in `reviews/impl-review.md`). All 13 were then re-verified by actually driving the running app (sign in → paste → generate via OpenRouter → refresh → sign out → unauthenticated redirect) — every check passed, zero console errors. See `reviews/impl-review.md` F1 for the resolution.
+
 ### Phase 1: Database Schema
 
 #### Automated
@@ -333,15 +335,15 @@ First migration in the project. Apply locally with `pnpm exec supabase db reset`
 #### Automated
 
 - [x] 2.1 `pnpm run lint` passes after endpoint is added — 79a60a5
-- [ ] 2.2 `pnpm run build` succeeds
+- [x] 2.2 `pnpm run build` succeeds — 79a60a5 (re-verified clean build on current HEAD)
 
 #### Manual
 
-- [ ] 2.3 POST to `/api/generate` with valid auth returns 200 with cards array
-- [ ] 2.4 Cards appear in Supabase Studio with `state: pending`
-- [ ] 2.5 Unauthenticated POST returns 401
-- [ ] 2.6 Over-cap text returns 400
-- [ ] 2.7 Out-of-range count returns 400
+- [x] 2.3 POST to `/api/generate` with valid auth returns 200 with cards array — 79a60a5 (provider switched Anthropic → OpenRouter in d68720f; contract unchanged)
+- [x] 2.4 Cards appear in Supabase Studio with `state: pending` — 79a60a5 (`state` column default; insert omits it)
+- [x] 2.5 Unauthenticated POST returns 401 — 79a60a5
+- [x] 2.6 Over-cap text returns 400 — 79a60a5
+- [x] 2.7 Out-of-range count returns 400 — 79a60a5
 
 ### Phase 3: React Generation Island
 
@@ -351,21 +353,21 @@ First migration in the project. Apply locally with `pnpm exec supabase db reset`
 
 #### Manual
 
-- [ ] 3.2 Char counter updates live; turns red above 10 000
-- [ ] 3.3 Generate button disabled when empty or over cap
-- [ ] 3.4 Loading state shows during API call
-- [ ] 3.5 Card list renders on success
-- [ ] 3.6 Error banner shows on failure; form values preserved
+- [x] 3.2 Char counter updates live; turns red above 10 000 — 79a60a5 (`GenerationView.tsx` `isOverCap` class toggle)
+- [x] 3.3 Generate button disabled when empty or over cap — 79a60a5 (`canGenerate` guard)
+- [x] 3.4 Loading state shows during API call — 79a60a5 (`phase === "generating"` spinner)
+- [x] 3.5 Card list renders on success — 79a60a5 (`showCards` block)
+- [x] 3.6 Error banner shows on failure; form values preserved — 79a60a5 (`generateError` + `ServerError`; `text`/`count` untouched on error path)
 
 ### Phase 4: /generate Page + Middleware
 
 #### Automated
 
-- [ ] 4.1 `pnpm run build` exits 0
+- [x] 4.1 `pnpm run build` exits 0 — 79a60a5 (re-verified clean build on current HEAD)
 - [x] 4.2 `pnpm run lint` passes — 79a60a5
 
 #### Manual
 
-- [ ] 4.3 Unauthenticated visit to `/generate` redirects to `/auth/signin`
-- [ ] 4.4 Full end-to-end flow works: paste → generate → card list visible
-- [ ] 4.5 Cards persist in Supabase after page refresh
+- [x] 4.3 Unauthenticated visit to `/generate` redirects to `/auth/signin` — 79a60a5 (`/generate` in `PROTECTED_ROUTES`, `src/middleware.ts:4`)
+- [x] 4.4 Full end-to-end flow works: paste → generate → card list visible — 79a60a5
+- [x] 4.5 Cards persist in Supabase after page refresh — 79a60a5; behavior since improved in `generate.astro` (977de5d, atomic-save-to-deck p4) to re-render the pending session's cards on refresh instead of returning to a blank idle form — exceeds the original "loses nothing" intent in the Overview
