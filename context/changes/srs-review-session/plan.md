@@ -243,8 +243,8 @@ Three new, additive migrations (`review_states` table + two RPCs); nothing alter
 
 #### Automated
 
-- [ ] 1.1 Migrations apply cleanly
-- [x] 1.2 Type checking passes
+- [x] 1.1 Migrations apply cleanly
+- [x] 1.2 Type checking passes — ed62302
 
 #### Manual
 
@@ -256,8 +256,8 @@ Three new, additive migrations (`review_states` table + two RPCs); nothing alter
 
 #### Automated
 
-- [ ] 2.1 Type checking passes
-- [ ] 2.2 astro sync runs cleanly
+- [x] 2.1 Type checking passes
+- [x] 2.2 astro sync runs cleanly
 
 #### Manual
 
