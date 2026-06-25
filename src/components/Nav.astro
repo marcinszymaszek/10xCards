@@ -37,7 +37,12 @@ const path = Astro.url.pathname;
     {
       user ? (
         <>
-          <span class="hidden truncate text-xs text-blue-100/50 sm:inline">{user.email}</span>
+          <a
+            href="/account"
+            class="hidden truncate text-xs text-blue-100/50 transition-colors hover:text-white sm:inline"
+          >
+            {user.email}
+          </a>
           <form method="POST" action="/api/auth/signout">
             <button type="submit" class="shrink-0 text-sm text-blue-100/70 transition-colors hover:text-white">
               Sign out

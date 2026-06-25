@@ -1,0 +1,27 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import DeleteAccountAction from "@/components/account/DeleteAccountAction";
+
+const { user } = Astro.locals;
+---
+
+<Layout title="Account">
+  <div class="bg-cosmic min-h-screen p-6">
+    <div class="mx-auto max-w-2xl">
+      <div class="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
+        <h1 class="mb-1 text-2xl font-bold text-white">Account</h1>
+        <p class="mb-6 text-sm text-blue-100/60">
+          Signed in as <span class="font-medium text-white">{user?.email}</span>
+        </p>
+
+        <div class="border-t border-white/10 pt-6">
+          <h2 class="mb-1 text-sm font-semibold text-red-300">Delete account</h2>
+          <p class="mb-4 text-sm text-blue-100/60">
+            Permanently delete your account and all of your data. This action is immediate and cannot be undone.
+          </p>
+          <DeleteAccountAction client:load />
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
