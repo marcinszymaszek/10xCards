@@ -258,8 +258,8 @@ Three new, additive migrations (`review_states` table + two RPCs); nothing alter
 
 #### Manual
 
-- [x] 1.3 get_due_cards returns all flashcards as due for a user with zero review_states rows
-- [x] 1.4 record_review advances and then correctly removes/restores a card from the due set
+- [x] 1.3 get_due_cards returns all flashcards as due for a user with zero review_states rows — 95d6990
+- [x] 1.4 record_review advances and then correctly removes/restores a card from the due set — 95d6990
 - [ ] 1.5 record_review fails closed for a flashcard owned by a different user
 
 ### Phase 2: Backend — ts-fsrs Integration & API Route
@@ -271,19 +271,19 @@ Three new, additive migrations (`review_states` table + two RPCs); nothing alter
 
 #### Manual
 
-- [x] 2.3 Two consecutive POST /api/review/[id] calls against the real dev (workerd) runtime show advancing due dates
-- [x] 2.4 Signed-out visit to /review redirects to /auth/signin
+- [x] 2.3 Two consecutive POST /api/review/[id] calls against the real dev (workerd) runtime show advancing due dates — 95d6990
+- [x] 2.4 Signed-out visit to /review redirects to /auth/signin — 95d6990
 
 ### Phase 3: Frontend — Review Page & Session UI
 
 #### Automated
 
-- [x] 3.1 Type checking passes
-- [x] 3.2 Production build succeeds
+- [x] 3.1 Type checking passes — 95d6990
+- [x] 3.2 Production build succeeds — 95d6990
 
 #### Manual
 
-- [x] 3.3 Full reveal → rate → advance flow works for a never-reviewed card
-- [x] 3.4 Completion state renders once all due cards are reviewed
+- [x] 3.3 Full reveal → rate → advance flow works for a never-reviewed card — 95d6990
+- [x] 3.4 Completion state renders once all due cards are reviewed — 95d6990
 - [ ] 3.5 Empty state renders for a user with zero flashcards
-- [x] 3.6 Mobile viewport has no horizontal scroll and reachable tap targets
+- [x] 3.6 Mobile viewport has no horizontal scroll and reachable tap targets — 95d6990
