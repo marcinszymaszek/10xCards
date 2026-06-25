@@ -60,8 +60,7 @@ export default function GenerationView({ initialDrafts }: Props) {
   const isCountValid = countInput.trim() !== "" && Number.isInteger(count) && count >= MIN_COUNT && count <= MAX_COUNT;
   const canGenerate = text.trim().length > 0 && !isOverCap && isCountValid && phase !== "generating";
   const acceptedCount = drafts.filter((d) => d.decision === "accepted").length;
-  const allAccepted = drafts.length > 0 && drafts.every((d) => d.decision === "accepted");
-  const allRejected = drafts.length > 0 && drafts.every((d) => d.decision === "rejected");
+  const hasPending = drafts.some((d) => d.decision === "pending");
 
   async function handleGenerate() {
     setPhase("generating");
@@ -111,12 +110,18 @@ export default function GenerationView({ initialDrafts }: Props) {
     setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, decision: "rejected" as const, isEditing: false } : d)));
   }
 
+  // Bulk actions only fill in still-pending cards — they never override a card
+  // the user has already explicitly accepted or rejected.
   function handleAcceptAll() {
-    setDrafts((prev) => prev.map((d) => ({ ...d, decision: "accepted" as const, isEditing: false })));
+    setDrafts((prev) =>
+      prev.map((d) => (d.decision === "pending" ? { ...d, decision: "accepted" as const, isEditing: false } : d)),
+    );
   }
 
   function handleRejectAll() {
-    setDrafts((prev) => prev.map((d) => ({ ...d, decision: "rejected" as const, isEditing: false })));
+    setDrafts((prev) =>
+      prev.map((d) => (d.decision === "pending" ? { ...d, decision: "rejected" as const, isEditing: false } : d)),
+    );
   }
 
   function handleEdit(id: string) {
@@ -318,14 +323,14 @@ export default function GenerationView({ initialDrafts }: Props) {
               <span className="text-xs text-blue-100/50">{acceptedCount} accepted</span>
               <Button
                 onClick={handleAcceptAll}
-                disabled={allAccepted || phase === "saving"}
+                disabled={!hasPending || phase === "saving"}
                 className="rounded-lg border border-white/20 bg-transparent px-3 py-1 text-xs font-medium text-blue-100/60 transition-colors hover:bg-white/10 disabled:opacity-50"
               >
                 Accept all
               </Button>
               <Button
                 onClick={handleRejectAll}
-                disabled={allRejected || phase === "saving"}
+                disabled={!hasPending || phase === "saving"}
                 className="rounded-lg border border-white/20 bg-transparent px-3 py-1 text-xs font-medium text-blue-100/60 transition-colors hover:bg-white/10 disabled:opacity-50"
               >
                 Reject all
