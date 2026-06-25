@@ -69,16 +69,42 @@ function getStoredReviewedCount(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+async function fetchDue(): Promise<ReviewCard[]> {
+  const res = await fetch("/api/review/due");
+  if (!res.ok) throw new Error("Failed to fetch due cards");
+  const json = (await res.json()) as { cards: ReviewCard[] };
+  return json.cards;
+}
+
 export default function ReviewSession({ initialCards }: ReviewSessionProps) {
   const [queue, setQueue] = useState(initialCards);
   const [revealed, setRevealed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(initialCards.length === 0);
   const [reviewedCount, setReviewedCount] = useState(() => (initialCards.length === 0 ? 0 : getStoredReviewedCount()));
+  const [total, setTotal] = useState(initialCards.length);
 
-  const total = initialCards.length;
   const current = queue[0];
+
+  const handleReset = async () => {
+    setResetting(true);
+    setError(null);
+    try {
+      const cards = await fetchDue();
+      setQueue(cards);
+      setTotal(cards.length);
+      setRevealed(false);
+      setReviewedCount(0);
+      if (typeof sessionStorage !== "undefined") sessionStorage.removeItem(REVIEWED_COUNT_KEY);
+      setDone(cards.length === 0);
+    } catch {
+      setError("Failed to check for more cards — please try again");
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const handleRate = async (rating: ReviewRating) => {
     if (queue.length === 0) return;
@@ -108,17 +134,34 @@ export default function ReviewSession({ initialCards }: ReviewSessionProps) {
   if (done || queue.length === 0) {
     return (
       <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-sm">
+        {error && (
+          <div className="mb-4">
+            <ServerError message={error} />
+          </div>
+        )}
         <p className="text-lg font-semibold text-white">
           {reviewedCount === 0
             ? "Nothing to review right now."
             : `Session finished — ${reviewedCount} flashcard${reviewedCount === 1 ? "" : "s"} reviewed.`}
         </p>
-        <a
-          href="/deck"
-          className="mt-4 inline-block rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white transition-colors hover:bg-white/20"
-        >
-          Back to deck
-        </a>
+        <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <button
+            onClick={() => {
+              void handleReset();
+            }}
+            disabled={resetting}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white transition-colors hover:bg-white/20 disabled:opacity-50 sm:w-auto"
+          >
+            {resetting && <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />}
+            {resetting ? "Checking…" : "Check for more cards"}
+          </button>
+          <a
+            href="/deck"
+            className="inline-block w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm text-white transition-colors hover:bg-white/20 sm:w-auto"
+          >
+            Back to deck
+          </a>
+        </div>
       </div>
     );
   }
@@ -170,8 +213,14 @@ export default function ReviewSession({ initialCards }: ReviewSessionProps) {
                 disabled={submitting}
                 className={`flex flex-col items-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${className}`}
               >
-                <span>{label}</span>
-                <span className="text-xs font-normal opacity-80">{current.previews[rating]}</span>
+                {submitting ? (
+                  <span className="size-4 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+                ) : (
+                  <>
+                    <span>{label}</span>
+                    <span className="text-xs font-normal opacity-80">{current.previews[rating]}</span>
+                  </>
+                )}
               </button>
             ))}
           </div>

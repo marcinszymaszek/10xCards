@@ -1,0 +1,34 @@
+import type { APIRoute } from "astro";
+import { createClient } from "@/lib/supabase";
+import { fetchDueCards } from "@/lib/reviews";
+
+export const GET: APIRoute = async (context) => {
+  const supabase = createClient(context.request.headers, context.cookies);
+  if (!supabase) {
+    return new Response(JSON.stringify({ error: "Service unavailable" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const user = context.locals.user;
+  if (!user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  try {
+    const cards = await fetchDueCards(supabase);
+    return new Response(JSON.stringify({ cards }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch {
+    return new Response(JSON.stringify({ error: "Failed to fetch due cards" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+};

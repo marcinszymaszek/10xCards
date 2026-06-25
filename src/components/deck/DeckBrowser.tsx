@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ServerError } from "@/components/auth/ServerError";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface FlashCard {
@@ -508,9 +509,14 @@ export default function DeckBrowser({
       {listError && <ServerError message={listError} />}
 
       {loading && (
-        <div className="flex min-h-[120px] items-center justify-center">
-          <p className="text-blue-100/50">Loading…</p>
-        </div>
+        <ul className="space-y-3" aria-busy="true" aria-label="Loading cards">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <li key={i} className="rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="mt-3 h-3 w-1/2" />
+            </li>
+          ))}
+        </ul>
       )}
 
       {!loading && items.length === 0 && q && (
