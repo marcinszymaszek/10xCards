@@ -60,7 +60,8 @@ export default function GenerationView({ initialDrafts }: Props) {
   const isCountValid = countInput.trim() !== "" && Number.isInteger(count) && count >= MIN_COUNT && count <= MAX_COUNT;
   const canGenerate = text.trim().length > 0 && !isOverCap && isCountValid && phase !== "generating";
   const acceptedCount = drafts.filter((d) => d.decision === "accepted").length;
-  const hasPending = drafts.some((d) => d.decision === "pending");
+  const allAccepted = drafts.length > 0 && drafts.every((d) => d.decision === "accepted");
+  const allRejected = drafts.length > 0 && drafts.every((d) => d.decision === "rejected");
 
   async function handleGenerate() {
     setPhase("generating");
@@ -111,15 +112,11 @@ export default function GenerationView({ initialDrafts }: Props) {
   }
 
   function handleAcceptAll() {
-    setDrafts((prev) =>
-      prev.map((d) => (d.decision === "pending" ? { ...d, decision: "accepted" as const, isEditing: false } : d)),
-    );
+    setDrafts((prev) => prev.map((d) => ({ ...d, decision: "accepted" as const, isEditing: false })));
   }
 
   function handleRejectAll() {
-    setDrafts((prev) =>
-      prev.map((d) => (d.decision === "pending" ? { ...d, decision: "rejected" as const, isEditing: false } : d)),
-    );
+    setDrafts((prev) => prev.map((d) => ({ ...d, decision: "rejected" as const, isEditing: false })));
   }
 
   function handleEdit(id: string) {
@@ -321,14 +318,14 @@ export default function GenerationView({ initialDrafts }: Props) {
               <span className="text-xs text-blue-100/50">{acceptedCount} accepted</span>
               <Button
                 onClick={handleAcceptAll}
-                disabled={!hasPending || phase === "saving"}
+                disabled={allAccepted || phase === "saving"}
                 className="rounded-lg border border-white/20 bg-transparent px-3 py-1 text-xs font-medium text-blue-100/60 transition-colors hover:bg-white/10 disabled:opacity-50"
               >
                 Accept all
               </Button>
               <Button
                 onClick={handleRejectAll}
-                disabled={!hasPending || phase === "saving"}
+                disabled={allRejected || phase === "saving"}
                 className="rounded-lg border border-white/20 bg-transparent px-3 py-1 text-xs font-medium text-blue-100/60 transition-colors hover:bg-white/10 disabled:opacity-50"
               >
                 Reject all
