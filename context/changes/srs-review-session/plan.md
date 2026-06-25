@@ -260,7 +260,7 @@ Three new, additive migrations (`review_states` table + two RPCs); nothing alter
 
 - [x] 1.3 get_due_cards returns all flashcards as due for a user with zero review_states rows — 95d6990
 - [x] 1.4 record_review advances and then correctly removes/restores a card from the due set — 95d6990
-- [ ] 1.5 record_review fails closed for a flashcard owned by a different user
+- [x] 1.5 record_review fails closed for a flashcard owned by a different user
 
 ### Phase 2: Backend — ts-fsrs Integration & API Route
 
@@ -285,5 +285,5 @@ Three new, additive migrations (`review_states` table + two RPCs); nothing alter
 
 - [x] 3.3 Full reveal → rate → advance flow works for a never-reviewed card — 95d6990
 - [x] 3.4 Completion state renders once all due cards are reviewed — 95d6990
-- [ ] 3.5 Empty state renders for a user with zero flashcards
+- [x] 3.5 Empty state renders for a user with zero flashcards
 - [x] 3.6 Mobile viewport has no horizontal scroll and reachable tap targets — 95d6990
