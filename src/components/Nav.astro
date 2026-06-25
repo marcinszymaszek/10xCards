@@ -23,6 +23,12 @@ const path = Astro.url.pathname;
         >
           Deck
         </a>
+        <a
+          href="/review"
+          class:list={`shrink-0 text-sm transition-colors ${path === "/review" ? "text-white" : "text-blue-100/70 hover:text-white"}`}
+        >
+          Review
+        </a>
       </div>
     )
   }

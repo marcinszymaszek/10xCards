@@ -3,7 +3,7 @@ change_id: srs-review-session
 title: Spaced repetition review session with binary rating
 status: implementing
 created: 2026-06-24
-updated: 2026-06-24
+updated: 2026-06-25
 archived_at: null
 ---
 

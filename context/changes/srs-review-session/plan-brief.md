@@ -5,7 +5,9 @@
 
 ## What & Why
 
-Implement `/review`: a spaced-repetition review session over the user's accepted flashcards, scheduled by the `ts-fsrs` library, with binary "knew it" / "didn't know it" rating per FR-009/FR-010 and US-01. This is the last piece of the generate → accept → review loop the PRD's success criteria depend on, and currently doesn't exist at all — no schema, route, or UI.
+Implement `/review`: a spaced-repetition review session over the user's accepted flashcards, scheduled by the `ts-fsrs` library. This is the last piece of the generate → accept → review loop the PRD's success criteria depend on, and currently doesn't exist at all — no schema, route, or UI.
+
+> **Revision (mid-implementation)**: the binary "knew it"/"didn't know it" rating (FR-010) and the "Show Answer" reveal gate were both superseded by the user during Phase 3, based on reference screenshots: the shipped UI uses full 4-grade FSRS rating (Again/Hard/Good/Easy) with a per-button next-appearance preview, an AI/Manual origin badge, and front+back shown together with no reveal step. See `plan.md`'s Overview note for detail. The PRD's FR-010 text was not updated to match — flagged for separate reconciliation.
 
 ## Starting Point
 
@@ -22,9 +24,10 @@ A signed-in user opens `/review` from the nav, sees the front of their oldest-du
 | `review_states` row creation | Lazy — created on first review | Keeps this slice fully self-contained; the two existing flashcard-creation paths (`promote_generation_session`, `POST /api/cards`) stay untouched | Plan |
 | `state` column type | `text` + check constraint | Matches every existing state-like column convention in this schema (`origin`, `flashcard_drafts.state`) | Plan |
 | Review history (`review_logs`) | Deferred to v2 | FR-010's minimum is "advance the schedule"; no PRD requirement asks for history | Plan |
-| Session scope | No cap — all due cards in one sitting | Matches the PRD's already-locked single-deck, binary-rating simplicity; MVP scale is small | Plan |
+| Session scope | No cap — all due cards in one sitting | Matches the PRD's already-locked single-deck simplicity; MVP scale is small | Plan |
 | New vs. due cards | Unified queue, no separation | Simplest model, matches FR-009's framing of one undifferentiated session | Plan |
-| Reveal interaction | Explicit "Show Answer" button | Matches this codebase's explicit-action UX pattern (explicit save/delete-confirm elsewhere) | Plan |
+| Rating scale | ~~Binary~~ → **4-grade (Again/Hard/Good/Easy)** | Superseded mid-implementation per user-provided reference screenshots; FSRS-computed interval preview shown per button | Plan (revised) |
+| Reveal interaction | ~~Explicit "Show Answer" button~~ → **front+back shown together** | Superseded mid-implementation, same revision | Plan (revised) |
 | Nav entry point | Plain "Review" link, no due-count badge | `Nav.astro` currently does zero data fetching on every page load; a badge would be the most invasive single change in the plan | Plan |
 | Due-card ordering | Oldest-due-first | Standard SRS practice; trivial `ORDER BY` | Plan |
 | FSRS library | `ts-fsrs` (base package only) | Canonical, zero-dependency, Workers-safe per external research; never the WASM `binding`/`fsrs-rs` packages | Research |
@@ -42,7 +45,6 @@ A signed-in user opens `/review` from the nav, sees the front of their oldest-du
 
 **Out of scope:**
 - `review_logs` history table (v2)
-- Graded rating (Again/Hard/Good/Easy) — binary only
 - Session pagination/capping, daily new-card limits
 - Due-count nav badge
 - Any change to `promote_generation_session` or `POST /api/cards`

@@ -4,6 +4,10 @@
 
 Implement `/review`: a spaced-repetition review session over the user's accepted flashcards, scheduled by `ts-fsrs` (FSRS algorithm), with binary "knew it" / "didn't know it" rating per FR-009/FR-010. This is a net-new vertical slice — no review-related schema, route, or UI exists today.
 
+> **Revision (mid-implementation, during Phase 3)**: the user provided reference screenshots showing a 4-grade rating UI (Again/Hard/Good/Easy) with per-button FSRS interval previews, an AI/Manual origin badge, and the question/answer shown together with no reveal gate. This explicitly supersedes the binary-rating decision below (FR-010's Socrates resolution) and the "Show Answer" reveal-gate decision — both are now graded rating + always-visible front/back. This is a deliberate product-scope change made by the user, not a planning gap; the PRD's FR-010 text has not been edited to match and should be reconciled separately. See the updated Phase 2/3 contracts and `## Progress` for what actually shipped.
+
+
+
 ## Current State Analysis
 
 - No SRS schema exists: zero columns on `flashcards` and no `review_states` table. Confirmed deferred to S-04 by `atomic-save-to-deck/plan.md` and `first-gated-generation/plan.md`.
@@ -32,7 +36,7 @@ Verification: manually exercise the full flow against `pnpm run dev` (real Cloud
 - No eager `review_states` row creation on flashcard create/promote — rows are created lazily on first review.
 - No per-session cap or pagination — a session always loads every due card at once.
 - No separate "new cards" intro batch or daily new-card limit — new and due cards share one queue.
-- No graded rating (Again/Hard/Good/Easy) — binary only, per FR-010 (mapped to FSRS `Rating.Again` / `Rating.Good`).
+- ~~No graded rating (Again/Hard/Good/Easy) — binary only, per FR-010~~ — **superseded mid-implementation**: graded rating (all 4 FSRS grades) shipped instead, see the revision note under Overview.
 - No due-count badge in the nav — a plain "Review" link only.
 - No client-side FSRS computation — scheduling math runs server-side in the API route, never trusting client input beyond the rating choice.
 - No changes to `promote_generation_session` or `POST /api/cards` — the lazy-creation design means both existing write paths are untouched.
@@ -122,20 +126,20 @@ Add the `ts-fsrs` dependency, the data-access/scheduling helper module, the rati
 
 **Intent**: Sibling to `src/lib/cards.ts`, same `SupabaseClient` type-alias pattern. Owns: fetching due cards, reading a flashcard's current schedule (or treating it as new), computing the next schedule via `ts-fsrs`, and persisting it.
 
-**Contract**:
+**Contract** (revised mid-implementation — see Overview note: 4-grade rating, not binary):
 - `type SupabaseClient = NonNullable<ReturnType<typeof createClient>>` (same alias as `cards.ts`).
-- `export interface ReviewCard { id: string; front: string; back: string }`.
-- `export async function fetchDueCards(supabase: SupabaseClient): Promise<ReviewCard[]>` — calls `supabase.rpc("get_due_cards")`.
-- `export type ReviewRating = "again" | "good"` — the binary PRD ratings, mapped internally to `Rating.Again` / `Rating.Good`.
-- `export async function submitReview(supabase: SupabaseClient, flashcardId: string, rating: ReviewRating): Promise<void>` — reads the existing `review_states` row for `(flashcardId)` scoped by RLS (`maybeSingle()`); builds a `Card` via `TypeConvert.card(existingRowAsCardInput)` if present, else `createEmptyCard()`; calls `fsrs().next(card, new Date(), rating === "good" ? Rating.Good : Rating.Again)`; calls `supabase.rpc("record_review", { p_flashcard_id: flashcardId, ...fields from result.card })`. Throws on any Supabase error, matching `cards.ts`'s `if (error) throw new Error(error.message)` convention.
+- `export type ReviewRating = "again" | "hard" | "good" | "easy"` — all four FSRS grades, mapped via `RATING_MAP` to `Rating.Again/Hard/Good/Easy`.
+- `export interface ReviewCard { id: string; front: string; back: string; origin: "ai" | "manual"; previews: Record<ReviewRating, string> }` — `previews` holds a human-readable interval label per grade ("tomorrow", "in 3 days", etc.), computed without committing via `fsrs().repeat(card, now)`.
+- `export async function fetchDueCards(supabase: SupabaseClient): Promise<ReviewCard[]>` — calls `supabase.rpc("get_due_cards")` (now also returning `origin` and the full schedule per card via a `20260625090000_get_due_cards_with_schedule.sql` migration replacing the Phase 1 function), builds each card's current `Card` state (or `createEmptyCard()` if never reviewed), and computes the 4-grade preview batched at SSR time — no extra per-card round trip.
+- `export async function submitReview(supabase: SupabaseClient, flashcardId: string, rating: ReviewRating): Promise<void>` — reads the existing `review_states` row for `(flashcardId)` scoped by RLS (`maybeSingle()`); builds a `Card` via `TypeConvert.card(...)` if present, else `createEmptyCard()`; calls `fsrs().next(card, new Date(), RATING_MAP[rating])`; calls `supabase.rpc("record_review", { p_flashcard_id: flashcardId, ...fields from result.card })`. Throws on any Supabase error, matching `cards.ts`'s `if (error) throw new Error(error.message)` convention.
 
 #### 4. Rating submission API route
 
 **File**: `src/pages/api/review/[id].ts`
 
-**Intent**: Accept a binary rating for one flashcard and advance its schedule. Mirrors the existing API route boilerplate exactly (null-guard → 401 check → hand-rolled validation → lib call).
+**Intent**: Accept a rating for one flashcard and advance its schedule. Mirrors the existing API route boilerplate exactly (null-guard → 401 check → hand-rolled validation → lib call).
 
-**Contract**: `POST` handler. Null-guards `createClient(...)` → 500 `{ error: "Service unavailable" }`. Checks `context.locals.user` → 401 `{ error: "Unauthorized" }`. Parses `context.params.id` as the flashcard id. Validates JSON body has `rating: "again" | "good"` via a hand-rolled type guard (no Zod, per repo convention) → 400 `{ error: "Invalid rating" }` otherwise. Calls `submitReview(supabase, id, rating)`; on success returns `200 {}`; on thrown error returns `500 { error: "Failed to record review" }`.
+**Contract**: `POST` handler. Null-guards `createClient(...)` → 500 `{ error: "Service unavailable" }`. Checks `context.locals.user` → 401 `{ error: "Unauthorized" }`. Parses `context.params.id` as the flashcard id. Validates JSON body has `rating: "again" | "hard" | "good" | "easy"` via a hand-rolled type guard (no Zod, per repo convention) → 400 `{ error: "Invalid rating" }` otherwise. Calls `submitReview(supabase, id, rating)`; on success returns `200 {}`; on thrown error returns `500 { error: "Failed to record review" }`.
 
 ### Success Criteria:
 
@@ -171,9 +175,15 @@ The user-facing review flow: SSR page fetching all due cards once, a React islan
 
 **File**: `src/components/review/ReviewSession.tsx`
 
-**Intent**: Hold the due-card queue in state; for the current card, show the front only; on "Show Answer" reveal the back plus the two rating buttons; on rating, POST to the API route, then advance to the next card regardless of network latency-sensitivity (await the response and surface an error inline on failure rather than advancing optimistically, since a failed write must not be silently treated as scheduled). When the queue is exhausted, show a completion state with a link back to `/deck`. When `initialCards` is empty, show an empty-deck-style state distinguishing "no cards at all" (link to `/generate`, matching `DeckBrowser`'s empty state) from "no cards due right now" (no due cards but the deck isn't empty — needs a flag passed from the page, or simply: if `initialCards.length === 0`, render one generic "Nothing to review right now" message, since the page doesn't separately know total deck size and adding that lookup is unwarranted scope for this state).
+**Intent** (revised mid-implementation — see Overview note): hold the due-card queue in state; show the front only behind an explicit "Show Answer" reveal gate (this was reverted back to the original reveal-gate design after a brief regression — see post-implementation fixes below), then back + a top-right `AI`/`Manual` origin badge and a `{n} / {total}` counter; show all 4 rating buttons (Repeat/Hard/Good/Easy) each labeled with its FSRS-computed preview interval, stacked full-width on mobile (`grid-cols-1`) and 4-across from `sm:` up, matching this codebase's existing mobile-full-width button convention; on rating, POST to the API route then advance to the next card (await the response, surface an error inline on failure rather than advancing optimistically). When the queue is exhausted, show "Session finished — {n} flashcards reviewed." with a link back to `/deck`, where `{n}` is a `sessionStorage`-backed running count (not `initialCards.length`) so a page reload mid-session doesn't understate the total — see post-implementation fixes. When `initialCards` is empty, show one generic "Nothing to review right now." message (no separate "empty deck" vs "nothing due" distinction, since the page doesn't separately know total deck size and adding that lookup is unwarranted scope for this state).
 
-**Contract**: `interface ReviewSessionProps { initialCards: ReviewCard[] }`. Internal state: `queue` (remaining cards), `revealed` (boolean), `submitting`, `error`. Reuses the existing visual language from `CardItem`/`DeckBrowser` (`rounded-xl border border-white/10 bg-white/5` card surface, `rounded-lg border ... bg-blue-600/30`/`bg-red-900/20`-style action buttons — no new design system, per the project's glass-surface/purple-CTA convention). "Didn't know it" maps to `rating: "again"`, "Knew it" maps to `rating: "good"`.
+**Contract**: `interface ReviewSessionProps { initialCards: ReviewCard[] }` where `ReviewCard` includes `origin` and `previews` (see Phase 2's `lib/reviews.ts` contract). Internal state: `queue` (remaining cards), `revealed`, `submitting`, `error`, `done`, `reviewedCount` (seeded from and persisted to `sessionStorage` key `reviewSessionReviewedCount`, cleared once the queue empties). Reuses the existing visual language from `CardItem`/`DeckBrowser` (`rounded-xl border border-white/10 bg-white/5` card surface, glass-surface/purple-CTA convention) — no new design system. Rating buttons map `"again"→Repeat`, `"hard"→Hard`, `"good"→Good`, `"easy"→Easy`, each rendering `current.previews[rating]` beneath its label.
+
+**Post-implementation fixes** (found during user testing, after the phase's initial manual-verification pass):
+1. The reveal gate was mistakenly dropped during the 4-grade revision above; restored as `revealed` state gating the back + rating buttons behind a "Show Answer" button.
+2. Preview intervals for a never-reviewed card showed sub-minute values instead of day-level intervals (tomorrow/2 days/3 days/8 days), because `lib/reviews.ts`'s scheduler used `fsrs()`'s default `enable_short_term: true`. Fixed by sharing one module-level `fsrs({ enable_short_term: false })` instance between the preview (`repeat()`) and the actual commit (`next()`) calls — both must use the same config or the preview would lie about what gets persisted.
+3. Rating buttons now stack full-width (`grid-cols-1`) on mobile instead of a 2×2 grid, matching the established `flex-col sm:flex-row`-style convention used elsewhere in this codebase for button groups.
+4. The completion count silently understated sessions that spanned a page reload, because `total = initialCards.length` resets on every fresh mount. Fixed with a `sessionStorage`-backed `reviewedCount` that increments per successful submission and survives reloads within the same tab (cleared once the queue is genuinely exhausted).
 
 #### 3. Nav entry point
 
@@ -192,8 +202,8 @@ The user-facing review flow: SSR page fetching all due cards once, a React islan
 
 #### Manual Verification:
 
-- As a signed-in user with at least one accepted flashcard never reviewed before: visit `/review`, confirm the front renders, click "Show Answer", confirm the back and both rating buttons appear, click "Knew it", confirm the session advances to the next due card (or to the completion state if it was the only one).
-- Re-visit `/review` immediately after completing a session where every card was just rated "Knew it" with a multi-day interval — confirm the queue is now empty (those cards are no longer due) and the completion state renders.
+- As a signed-in user with at least one accepted flashcard never reviewed before: visit `/review`, confirm front+back render together with an origin badge and counter, confirm all 4 rating buttons show a preview interval, click "Good", confirm the session advances to the next due card (or to the completion state if it was the only one).
+- Re-visit `/review` immediately after completing a session where every card was just rated "Good" or "Easy" with a multi-day interval — confirm the queue is now empty (those cards are no longer due) and the completion state renders.
 - As a signed-in user with zero flashcards at all, visit `/review` and confirm a clear empty state renders (no error, no blank screen).
 - Resize to a mobile viewport and confirm no horizontal scroll and tap targets are reachable without zoom, per the PRD's responsive-web NFR.
 
@@ -211,8 +221,8 @@ The user-facing review flow: SSR page fetching all due cards once, a React islan
 
 ### Manual Testing Steps:
 
-1. Fresh flashcard, never reviewed: front shown → Show Answer → rate "Didn't know it" → confirm it reappears as due again soon (short FSRS relearning interval) rather than far in the future.
-2. Same card, rate "Knew it" repeatedly across multiple sessions (manually advancing system clock or waiting) → confirm `stability`/`scheduled_days` trend upward and `reps` increments each time.
+1. Fresh flashcard, never reviewed: front+back shown together → rate "Repeat" (Again) → confirm it reappears as due again soon (short FSRS relearning interval) rather than far in the future.
+2. Same card, rate "Good"/"Easy" repeatedly across multiple sessions (manually advancing system clock or waiting) → confirm `stability`/`scheduled_days` trend upward and `reps` increments each time, and confirm the preview intervals shown on each button diverge from each other (rather than all looking the same) as review history accumulates.
 3. Multiple due cards → confirm oldest-due (or, for never-reviewed cards, oldest-created) appears first.
 4. Sign out, visit `/review` directly → redirected to `/auth/signin`.
 5. Attempt to call `POST /api/review/<id>` for a flashcard ID belonging to another user (e.g., via a second test account) → confirm it fails closed rather than writing a schedule row.
@@ -243,37 +253,37 @@ Three new, additive migrations (`review_states` table + two RPCs); nothing alter
 
 #### Automated
 
-- [x] 1.1 Migrations apply cleanly
+- [x] 1.1 Migrations apply cleanly — 2b0f8a8
 - [x] 1.2 Type checking passes — ed62302
 
 #### Manual
 
-- [ ] 1.3 get_due_cards returns all flashcards as due for a user with zero review_states rows
-- [ ] 1.4 record_review advances and then correctly removes/restores a card from the due set
+- [x] 1.3 get_due_cards returns all flashcards as due for a user with zero review_states rows
+- [x] 1.4 record_review advances and then correctly removes/restores a card from the due set
 - [ ] 1.5 record_review fails closed for a flashcard owned by a different user
 
 ### Phase 2: Backend — ts-fsrs Integration & API Route
 
 #### Automated
 
-- [x] 2.1 Type checking passes
-- [x] 2.2 astro sync runs cleanly
+- [x] 2.1 Type checking passes — 2b0f8a8
+- [x] 2.2 astro sync runs cleanly — 2b0f8a8
 
 #### Manual
 
-- [ ] 2.3 Two consecutive POST /api/review/[id] calls against the real dev (workerd) runtime show advancing due dates
-- [ ] 2.4 Signed-out visit to /review redirects to /auth/signin
+- [x] 2.3 Two consecutive POST /api/review/[id] calls against the real dev (workerd) runtime show advancing due dates
+- [x] 2.4 Signed-out visit to /review redirects to /auth/signin
 
 ### Phase 3: Frontend — Review Page & Session UI
 
 #### Automated
 
-- [ ] 3.1 Type checking passes
-- [ ] 3.2 Production build succeeds
+- [x] 3.1 Type checking passes
+- [x] 3.2 Production build succeeds
 
 #### Manual
 
-- [ ] 3.3 Full reveal → rate → advance flow works for a never-reviewed card
-- [ ] 3.4 Completion state renders once all due cards are reviewed
+- [x] 3.3 Full reveal → rate → advance flow works for a never-reviewed card
+- [x] 3.4 Completion state renders once all due cards are reviewed
 - [ ] 3.5 Empty state renders for a user with zero flashcards
-- [ ] 3.6 Mobile viewport has no horizontal scroll and reachable tap targets
+- [x] 3.6 Mobile viewport has no horizontal scroll and reachable tap targets

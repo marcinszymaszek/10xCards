@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase";
 import { submitReview, type ReviewRating } from "@/lib/reviews";
 
 function isReviewRating(value: unknown): value is ReviewRating {
-  return value === "again" || value === "good";
+  return value === "again" || value === "hard" || value === "good" || value === "easy";
 }
 
 export const POST: APIRoute = async (context) => {
