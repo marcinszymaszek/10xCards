@@ -1,5 +1,7 @@
 .claude/**/10x-*
 .claude/**/.10x-*
+.github/
+./agents/
 
 # planning / AI context artifacts
 context/changes/
