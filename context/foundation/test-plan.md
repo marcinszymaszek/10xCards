@@ -6,7 +6,7 @@
 >
 > Refresh: re-run `/10x-test-plan --refresh` when stale (see §8).
 >
-> Last updated: 2026-06-25 (Phase 1 change opened)
+> Last updated: 2026-06-30 (Phase 1 planned — plan.md written, implementation pending)
 
 ## 1. Strategy
 
@@ -79,7 +79,7 @@ orchestrator updates Status as artifacts appear on disk.
 
 | # | Phase name | Goal (one line) | Risks covered | Test types | Status | Change folder |
 |---|------------|-----------------|---------------|------------|--------|---------------|
-| 1 | Bootstrap + save-to-deck integrity | Stand up the test runner; prove accepted candidates land in the deck exactly once and invalid writes are rejected before persistence | #1, #6 | unit + integration | researched | context/changes/testing-bootstrap-save-to-deck-integrity/ |
+| 1 | Bootstrap + save-to-deck integrity | Stand up the test runner; prove accepted candidates land in the deck exactly once and invalid writes are rejected before persistence | #1, #6 | unit + integration | planned | context/changes/testing-bootstrap-save-to-deck-integrity/ |
 | 2 | Auth gating + cross-user authorization | Protected routes reject the unauthenticated; no user can touch another's card or review | #2, #3 | integration | not started | — |
 | 3 | Generation resilience | A failed or garbage LLM response yields a clean error and persists nothing | #5 | integration | not started | — |
 | 4 | Candidate-review UI behavior | Bulk actions preserve individual accept/reject decisions | #4 | component | not started | — |
@@ -147,11 +147,47 @@ relevant rollout phase ships; before that, the sub-section reads "TBD — see
 
 ### 6.1 Adding a unit test
 
-- TBD — see §3 Phase 1 (Vitest bootstrap).
+Handler/unit tests run under Vitest (`vitest.config.ts`, `node` environment, glob
+`src/**/*.{test,spec}.ts`). They call an Astro `APIRoute` directly — no HTTP
+server, no DB.
+
+1. Import `buildContext` and `spyFetch` from `src/test/handler.ts`.
+2. `buildContext({ body, user?, headers? })` returns an `APIContext`-shaped object
+   (a real `Request`, a cookies stub, and `locals.user` — defaults to a fixed
+   test user; pass `user: undefined` to exercise the unauth/401 path).
+3. Install `const spy = spyFetch()` to assert the network boundary. The default
+   impl throws a marker, so a handler that *should not* call the LLM proves it by
+   `expect(spy).not.toHaveBeenCalled()`; a handler that *should* reach fetch is
+   proven by the marker surfacing (e.g. a 500). Restore in `afterEach`.
+4. Call `await POST(context)` and assert on `response.status`. Do **not** assert
+   exact error-message strings (oracle-from-implementation).
+
+Reference: `src/pages/api/generate.test.ts`, `src/pages/api/drafts/promote.test.ts`.
 
 ### 6.2 Adding an integration test
 
-- TBD — see §3 Phase 1 for the save-to-deck integrity pattern (accepted-candidate exactly-once / no-partial-write) and the server-side validation-parity pattern.
+Integration tests run against a local Supabase (`supabase start`) and **skip
+cleanly** when it is down — they never hard-fail CI.
+
+1. At module top: `const reachable = await isSupabaseReachable()` (from
+   `src/test/supabase.ts`) and wrap the suite in `describe.skipIf(!reachable)`.
+   `isSupabaseReachable` checks both a service-role key and a health ping with
+   `AbortSignal.timeout`.
+2. Per test: `const { client, userId, cleanup } = await createTestUserClient()`
+   — an admin-created throwaway user (unique timestamp+random email) signed in so
+   `auth.uid()` resolves and RLS behaves as in production. Always `cleanup()` in
+   a `finally`.
+3. **Save-to-deck integrity pattern (exactly-once + partitioning):** seed N
+   pending drafts in a unique `generation_session_id`, accept a subset, call the
+   RPC, then assert deck truth by **re-querying `flashcards`** (count + content
+   once) and the draft states (accepted vs rejected). Never trust the RPC's
+   `saved` return — it is a payload count, not deck truth.
+4. **Documenting a known defect:** mark the test `it.fails()` with a comment
+   linking the follow-up change; its body asserts the *correct* behavior, so the
+   suite stays green today and flips red the moment the bug is fixed.
+
+Reference: `src/test/integration/promote.integration.test.ts`,
+`src/test/supabase.ts`.
 
 ### 6.3 Adding an e2e test
 
@@ -163,7 +199,21 @@ relevant rollout phase ships; before that, the sub-section reads "TBD — see
 
 ### 6.5 Adding a test for the generation / LLM path
 
-- TBD — see §3 Phase 3 for the malformed/error-response → clean-error, persist-nothing pattern (mock the OpenRouter edge only).
+Partially shipped (Phase 2 — input validation only). The `generate` handler
+validates `text` (string, non-empty, ≤ 10000) and `count` (integer 1–20) and
+rejects malformed JSON *before* any LLM call or DB write. Test that boundary
+with the unit harness (§6.1):
+
+- **Reject → 400 AND fetch never called** for each invalid input (over-cap text,
+  out-of-range / non-integer / string `count`, malformed JSON) — the fetch spy
+  is the "no side-effect" oracle.
+- **Positive boundary → reaches fetch** (text length 10000 + `count` 1; `count`
+  20): the marker surfacing proves validation passed without needing a DB.
+
+The full malformed/error-response → clean-error, persist-nothing path (mocking
+the OpenRouter edge with MSW) remains rollout Phase 3.
+
+Reference: `src/pages/api/generate.test.ts`.
 
 ### 6.6 Adding a component test for candidate review
 
@@ -173,6 +223,26 @@ relevant rollout phase ships; before that, the sub-section reads "TBD — see
 
 (Optional. After each phase lands, `/10x-implement` appends a 2–3 line note
 here capturing anything surprising the rollout phase taught.)
+
+- **Phase 1 (Vitest bootstrap):** `getViteConfig` from `astro/config` is
+  unusable for the test runner — the Cloudflare adapter's Vite plugin sets
+  `resolve.external` on the worker environment and Vitest rejects it with a
+  startup error. Use plain `defineConfig` from `vitest/config` with manual
+  aliases: `astro:env/server` → `src/test/astro-env-server.stub.ts` (reads
+  `process.env`) and `@/` → `src/`.- **Phase 3 (local-env prerequisite):** a fresh `supabase start` here grants
+  DML on `public` tables only to `postgres` (default privileges weren't applied
+  to the migrated tables), so the authed seed step fails with `permission denied
+  for table flashcard_drafts`. The app works in cloud because the real project
+  has the standard grants. To run the integration suite locally, replicate them
+  once after `supabase start`:
+  `GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;`
+  (plus the matching `ALTER DEFAULT PRIVILEGES`). This is a local-environment
+  step, not a migration change.- **Phase 3 (promote integrity):** three real defects are documented via
+  `it.fails()` and stay green today — promote is not idempotent (double-submit
+  duplicates), does not verify `accepted` ids map to pending drafts, and has no
+  content-length cap on the write path. Fixes are a deferred follow-up feature
+  change (run `/10x-new` after this rollout); when each lands, its `it.fails()`
+  flips the suite red — remove `.fails` then.
 
 ## 7. What We Deliberately Don't Test
 
